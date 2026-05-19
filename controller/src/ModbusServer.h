@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstdint>
 #include <string>
+#include <mutex>
 #include <thread>
 
 // Modbus TCP server exposing sensor state and receiving PLC commands.
