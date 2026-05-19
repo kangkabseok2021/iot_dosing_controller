@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Python lint ────────────────────────────────────────────────────────────
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --frozen
+      - run: uv run ruff check api/ collector/ plc_simulator/ tests/
+      - run: uv run ruff format --check api/ collector/ plc_simulator/ tests/
+
+  # ── Python tests (no C++ daemon, no Modbus broker) ────────────────────────
+  python-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --frozen
+      - run: uv run pytest tests/ -v --tb=short
+
+  # ── C++ build + 13 GoogleTests ────────────────────────────────────────────
+  cpp-build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install libmodbus
+        run: sudo apt-get install -y libmodbus-dev
+
+      - name: Configure CMake
+        run: cmake -B controller/build -S controller -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_DEFAULT_CMP0135=NEW
+
+      - name: Build
+        run: cmake --build controller/build -j4
+
+      - name: Run GoogleTests (13 tests)
+        run: ctest --test-dir controller/build --output-on-failure -V
+
+  # ── ARM64 cross-compile ────────────────────────────────────────────────────
+  arm64-cross-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ARM64 cross-compiler
+        run: sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+      - name: Cross-compile dosing_core (no libmodbus, tests off)
+        run: |
+          cmake -B controller/build-arm64 -S controller \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_POLICY_DEFAULT_CMP0135=NEW \
+            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+            -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+            -DCMAKE_SYSTEM_NAME=Linux \
+            -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+            -DBUILD_TESTING=OFF
+          cmake --build controller/build-arm64 --target dosing_core -j4
