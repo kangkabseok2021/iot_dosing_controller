@@ -1,5 +1,7 @@
 controller/build/
 controller/build-arm64/
+ev_battery_hil/bms/build/
+ev_battery_hil/bms/build-arm64/
 .venv/
 __pycache__/
 *.pyc

@@ -1,0 +1,68 @@
+#include "BmsStateMachine.h"
+#include <cstdio>
+
+const char* bms_state_name(BmsState s) noexcept {
+    switch (s) {
+        case BmsState::IDLE:        return "IDLE";
+        case BmsState::DISCHARGING: return "DISCHARGING";
+        case BmsState::CHARGING:    return "CHARGING";
+        case BmsState::FAULT:       return "FAULT";
+    }
+    return "UNKNOWN";
+}
+
+void BmsStateMachine::enter_fault(FaultCode fc, const BatteryState& s) noexcept {
+    state_      = BmsState::FAULT;
+    fault_code_ = fc;
+    char buf[128];
+    std::snprintf(buf, sizeof(buf),
+        "FAULT: %s  SoC=%.3f  T=%.1f°C  V=%.3fV  I=%.1fA",
+        fault_code_name(fc), s.soc, s.t_cell, s.v_terminal, s.i_load);
+    fault_detail_ = buf;
+}
+
+bool BmsStateMachine::update(BatteryState& s) {
+    if (state_ == BmsState::FAULT) return true;  // latched
+
+    // Overcurrent: reject command, do not integrate
+    if (std::abs(s.i_load) > BatteryModel::I_MAX) {
+        enter_fault(FaultCode::OVERCURRENT, s);
+        return false;
+    }
+
+    FaultCode fc = model_.step(s);
+
+    if (fc != FaultCode::NONE) {
+        enter_fault(fc, s);
+        return true;
+    }
+
+    s.fault = FaultCode::NONE;
+
+    // FSM transitions
+    const double i = s.i_load;
+    switch (state_) {
+        case BmsState::IDLE:
+            if (i > kIdleThreshold)  state_ = BmsState::DISCHARGING;
+            else if (i < -kIdleThreshold) state_ = BmsState::CHARGING;
+            break;
+        case BmsState::DISCHARGING:
+            if (i <= kIdleThreshold) state_ = BmsState::IDLE;
+            break;
+        case BmsState::CHARGING:
+            if (i >= -kIdleThreshold) state_ = BmsState::IDLE;
+            break;
+        case BmsState::FAULT:
+            break;
+    }
+    return true;
+}
+
+void BmsStateMachine::reset(BatteryState& s) noexcept {
+    state_       = BmsState::IDLE;
+    fault_code_  = FaultCode::NONE;
+    fault_detail_.clear();
+    s.fault         = FaultCode::NONE;
+    s.block_cooling = false;
+    s.i_load        = 0.0;
+}
