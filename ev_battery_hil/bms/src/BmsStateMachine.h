@@ -29,12 +29,15 @@ public:
     BmsState state()      const noexcept { return state_; }
     FaultCode fault_code() const noexcept { return fault_code_; }
     std::string fault_detail() const { return fault_detail_; }
+    bool warned() const noexcept { return warned_; }
 
 private:
     BatteryModel model_;
     BmsState     state_{BmsState::IDLE};
     FaultCode    fault_code_{FaultCode::NONE};
     std::string  fault_detail_;
+    bool         warned_{false};
+    double       joule_energy_{0.0};  // cumulative I²R₀·Δt [J]
 
     void enter_fault(FaultCode fc, const BatteryState& s) noexcept;
 };

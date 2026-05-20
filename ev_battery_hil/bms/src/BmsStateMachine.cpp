@@ -32,8 +32,31 @@ bool BmsStateMachine::update(BatteryState& s) {
 
     FaultCode fc = model_.step(s);
 
+    // Accumulate Joule heating energy (I²·R₀·Δt) for thermal runaway detection
+    joule_energy_ += s.i_load * s.i_load * BatteryModel::R0 * BatteryModel::DT;
+
+    // Temperature-based warning
+    if (!warned_ && s.t_cell >= BatteryModel::T_WARN) {
+        warned_ = true;
+        fprintf(stderr, "[WARN] T_cell=%.1f>=%.0f°C — thermal warning threshold\n",
+                s.t_cell, BatteryModel::T_WARN);
+    }
+    // Cumulative energy-based warning (fires before energy fault)
+    if (!warned_ && joule_energy_ >= BatteryModel::E_WARN) {
+        warned_ = true;
+        fprintf(stderr, "[WARN] Joule energy=%.0fJ>=%.0fJ — thermal runaway risk\n",
+                joule_energy_, BatteryModel::E_WARN);
+    }
+
+    // Model-level fault (overtemperature, undervoltage, overvoltage)
     if (fc != FaultCode::NONE) {
         enter_fault(fc, s);
+        return true;
+    }
+
+    // Energy-based thermal runaway fault
+    if (joule_energy_ >= BatteryModel::E_FAULT) {
+        enter_fault(FaultCode::OVERTEMPERATURE, s);
         return true;
     }
 
@@ -62,6 +85,8 @@ void BmsStateMachine::reset(BatteryState& s) noexcept {
     state_       = BmsState::IDLE;
     fault_code_  = FaultCode::NONE;
     fault_detail_.clear();
+    warned_         = false;
+    joule_energy_   = 0.0;
     s.fault         = FaultCode::NONE;
     s.block_cooling = false;
     s.i_load        = 0.0;

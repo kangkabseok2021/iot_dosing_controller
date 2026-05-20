@@ -46,6 +46,8 @@ public:
     static constexpr double I_MAX      = 250.0;   // A — overcurrent limit
     static constexpr double T_FAULT    = 80.0;    // °C — thermal runaway
     static constexpr double T_WARN     = 60.0;    // °C — thermal warning
+    static constexpr double E_WARN     = 875.0;   // J  — cumulative Joule energy warning (I²R₀·Δt)
+    static constexpr double E_FAULT    = 1375.0;  // J  — cumulative Joule energy fault (thermal runaway)
     static constexpr double SOC_LOW    = 0.05;    // undervoltage protection
     static constexpr double SOC_HIGH   = 0.95;    // overvoltage protection
     static constexpr double DT         = 1e-3;    // s — RK4 step (1 kHz)
