@@ -45,7 +45,7 @@ jobs:
           cmake -B ev_battery_hil/bms/build-arm64 \
                 -S ev_battery_hil/bms \
                 -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_TOOLCHAIN_FILE=ev_battery_hil/cmake/toolchain-arm64.cmake \
+                -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/ev_battery_hil/cmake/toolchain-arm64.cmake \
                 -DBUILD_TESTING=OFF \
                 -DCMAKE_POLICY_DEFAULT_CMP0135=NEW
           cmake --build ev_battery_hil/bms/build-arm64 --target bms_daemon -j4
