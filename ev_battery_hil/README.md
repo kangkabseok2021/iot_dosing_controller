@@ -138,3 +138,4 @@ TARGET_HOST=192.168.1.10 ./scripts/run-smoke-test.sh
 ```
 
 Expected: `SoC delta: 0.008... — PASS`
+
