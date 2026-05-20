@@ -14,6 +14,8 @@ add_library(bms_core STATIC
 target_include_directories(bms_core PUBLIC src)
 target_compile_options(bms_core PRIVATE -Wall -Wextra -Wpedantic)
 
+option(ENABLE_ASAN "Enable AddressSanitizer + UBSan builds" OFF)
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     add_executable(bms_daemon
         src/TelemetryServer.cpp
