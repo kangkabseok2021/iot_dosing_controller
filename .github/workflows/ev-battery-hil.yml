@@ -1,0 +1,57 @@
+name: EV Battery HIL CI
+
+on:
+  push:
+    branches: [main]
+    paths: [ev_battery_hil/**]
+  pull_request:
+    branches: [main]
+    paths: [ev_battery_hil/**]
+
+jobs:
+  python-lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ev_battery_hil
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --frozen
+      - run: uv run ruff check orchestrator/
+      - run: uv run ruff format --check orchestrator/
+
+  python-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ev_battery_hil
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --frozen
+      - run: uv run pytest orchestrator/tests/ -v --tb=short -m "not hardware"
+
+  cpp-cross-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ARM64 cross-compiler
+        run: sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+      - name: Cross-compile BMS daemon for ARM64
+        run: |
+          cmake -B ev_battery_hil/bms/build-arm64 \
+                -S ev_battery_hil/bms \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_TOOLCHAIN_FILE=ev_battery_hil/cmake/toolchain-arm64.cmake \
+                -DBUILD_TESTING=OFF \
+                -DCMAKE_POLICY_DEFAULT_CMP0135=NEW
+          cmake --build ev_battery_hil/bms/build-arm64 --target bms_daemon -j4
+
+      - name: Upload ARM64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bms-daemon-arm64
+          path: ev_battery_hil/bms/build-arm64/bms_daemon
