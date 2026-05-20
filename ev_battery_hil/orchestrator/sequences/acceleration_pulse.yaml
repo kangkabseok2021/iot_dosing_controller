@@ -1,0 +1,10 @@
+id: ACCELERATION_PULSE
+description: "200 A pulse for 5 s, rest 5 s, repeated 10x"
+repeat: 10
+steps:
+  - command: SET_CURRENT
+    value: 200.0
+    duration_s: 5
+  - command: SET_CURRENT
+    value: 0.0
+    duration_s: 5

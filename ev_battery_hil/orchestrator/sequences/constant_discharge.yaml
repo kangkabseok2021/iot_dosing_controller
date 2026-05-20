@@ -1,0 +1,6 @@
+id: CONSTANT_DISCHARGE
+description: "50 A constant discharge"
+steps:
+  - command: SET_CURRENT
+    value: 50.0
+    duration_s: 1800

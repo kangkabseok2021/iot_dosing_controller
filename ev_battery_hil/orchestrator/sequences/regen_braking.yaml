@@ -1,0 +1,9 @@
+id: REGEN_BRAKING
+description: "Regenerative braking: -50 A for 2 s"
+steps:
+  - command: SET_CURRENT
+    value: -50.0
+    duration_s: 2
+  - command: SET_CURRENT
+    value: 0.0
+    duration_s: 1

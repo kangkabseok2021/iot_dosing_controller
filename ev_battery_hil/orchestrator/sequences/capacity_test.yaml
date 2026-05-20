@@ -1,0 +1,6 @@
+id: CAPACITY_TEST
+description: "Full discharge at C/5 (20 A) to SoC=0.05"
+steps:
+  - command: SET_CURRENT
+    value: 20.0
+    duration_s: 18000
