@@ -30,8 +30,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     endif()
 endif()
 
-enable_testing()
 if(BUILD_TESTING)
+    enable_testing()
     include(FetchContent)
     FetchContent_Declare(
         googletest
