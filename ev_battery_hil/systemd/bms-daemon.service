@@ -1,0 +1,15 @@
+[Unit]
+Description=EV Battery HIL — BMS Daemon (C++17 Thevenin ECM)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/ev-battery-hil/bms_daemon 5555
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bms-daemon
+
+[Install]
+WantedBy=multi-user.target

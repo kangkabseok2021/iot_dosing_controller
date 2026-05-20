@@ -1,0 +1,20 @@
+[Unit]
+Description=EV Battery HIL — Python Orchestrator (FastAPI)
+After=network.target bms-daemon.service
+
+[Service]
+Type=notify
+WorkingDirectory=/opt/ev-battery-hil
+ExecStart=/opt/ev-battery-hil/.venv/bin/uvicorn orchestrator.app.main:app \
+          --host 0.0.0.0 --port 8080
+Environment=BMS_HOST=localhost
+Environment=BMS_PORT=5555
+WatchdogSec=30s
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ev-hil-orchestrator
+
+[Install]
+WantedBy=multi-user.target
