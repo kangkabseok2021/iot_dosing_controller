@@ -1,3 +1,14 @@
+# IoT Dosing Controller & EV Battery HIL Test Simulator
+
+Two embedded systems projects sharing a C++17 ARM64 daemon pattern and Python asyncio orchestration layer.
+
+| Project | Description | Docs |
+|---|---|---|
+| **Edge IoT Dosing Controller** | C++17 Modbus TCP daemon + Python PLC simulator + FastAPI dashboard — deploys to Raspberry Pi 4 via Ansible | [Architecture ↓](#architecture) |
+| **EV Battery HIL Test Simulator** | C++17 Thevenin ECM battery daemon + Python asyncio orchestrator with FastAPI, fault injection, and GitHub Actions ARM64 CI | [ev_battery_hil/README.md](ev_battery_hil/README.md) |
+
+---
+
 # Edge-based IoT Dosing Controller
 
 A complete edge-IoT stack for pipeline and dosing technology: a **C++17 daemon** simulates RFID tags and flow sensors, exposes process registers over **Modbus TCP**, a **Python PLC simulator** polls and controls valve state, telemetry is persisted in **SQLite**, and a **FastAPI REST layer** drives a real-time dashboard. The whole system deploys on a Raspberry Pi 4 (or any ARM64 edge device) with a single Ansible command.
@@ -82,7 +93,7 @@ All Python services (collector, API, PLC simulator, dashboard) run as Docker Com
 
 ```
 iot_dosing_controller/
-├── controller/              # C++17 daemon
+├── controller/              # C++17 Dosing daemon
 │   ├── src/
 │   │   ├── RfidSimulator.{h,cpp}   # EPC pool, Bernoulli trigger
 │   │   ├── FlowSensor.{h,cpp}      # Q = k·f + Gaussian noise
@@ -93,20 +104,35 @@ iot_dosing_controller/
 │   │   └── test_controller.cpp     # 13 GoogleTests
 │   └── CMakeLists.txt
 ├── collector/               # Modbus → SQLite collector
-│   ├── modbus_reader.py
-│   └── db.py
 ├── api/                     # FastAPI REST layer
-│   └── main.py
 ├── plc_simulator/           # Python PLC simulator
-│   └── simulator.py
 ├── static/                  # Vanilla JS dashboard
-│   └── index.html
 ├── tests/                   # Python tests (14 tests)
 ├── ansible/                 # Deployment playbook
-│   └── inventory/
 ├── docker-compose.yml
 ├── pyproject.toml
-└── .github/workflows/ci.yml
+├── ev_battery_hil/          # ── EV Battery HIL Test Simulator ──────────
+│   ├── bms/                 #   C++17 Thevenin ECM daemon (11 GoogleTests)
+│   │   ├── src/
+│   │   │   ├── BatteryModel.{h,cpp}       # Thevenin 1-RC ECM + RK4
+│   │   │   ├── BmsStateMachine.{h,cpp}    # IDLE→DISCHARGING→CHARGING→FAULT
+│   │   │   └── TelemetryServer.{h,cpp}    # TCP JSON 100 Hz
+│   │   └── CMakeLists.txt
+│   ├── orchestrator/        #   Python asyncio orchestrator (19 pytest)
+│   │   ├── app/
+│   │   │   ├── client.py          # asyncio TCP + reconnect
+│   │   │   ├── sequences.py       # YAML drive cycles + SQLite log
+│   │   │   ├── fault_injector.py  # THERMAL_RUNAWAY / SENSOR_DROPOUT / OVERCURRENT
+│   │   │   └── main.py            # FastAPI + lifespan
+│   │   ├── sequences/             # 4 YAML test sequences
+│   │   └── tests/                 # 19 pytest tests
+│   ├── cmake/toolchain-arm64.cmake
+│   ├── systemd/             #   bms-daemon.service + orchestrator.service
+│   ├── scripts/             #   deploy.sh + run-smoke-test.sh
+│   └── README.md
+└── .github/workflows/
+    ├── ci.yml               # Dosing controller CI
+    └── ev-battery-hil.yml   # EV Battery HIL CI (python-lint + python-test + ARM64)
 ```
 
 ---
@@ -195,12 +221,22 @@ uv run pytest tests/ -v --tb=short
 
 ## CI
 
+### Dosing Controller (`.github/workflows/ci.yml`)
+
 | Job               | Runner        | What it does                                             |
 |-------------------|---------------|----------------------------------------------------------|
 | `lint`            | ubuntu-latest | ruff check + ruff format on all Python                   |
 | `python-tests`    | ubuntu-latest | 14 pytest tests (in-memory SQLite, no daemon)            |
 | `cpp-build-test`  | ubuntu-latest | CMake build + 13 GoogleTests with libmodbus from apt     |
 | `arm64-cross-build` | ubuntu-latest | Cross-compile `dosing_core` for aarch64 (no libmodbus) |
+
+### EV Battery HIL (`.github/workflows/ev-battery-hil.yml`) — triggers on `ev_battery_hil/**`
+
+| Job                 | Runner        | What it does                                              |
+|---------------------|---------------|-----------------------------------------------------------|
+| `python-lint`       | ubuntu-latest | ruff check + ruff format on orchestrator/                 |
+| `python-test`       | ubuntu-latest | 19 pytest tests (mock TCP server, no daemon needed)       |
+| `cpp-cross-compile` | ubuntu-latest | Cross-compile `bms_daemon` for ARM64, upload artifact     |
 
 ---
 
