@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Plot a 3-panel thermal runaway timeline from orchestrator event log."""
+
 from __future__ import annotations
 
 import argparse
@@ -8,6 +9,7 @@ import sys
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
@@ -26,8 +28,9 @@ def _load_events(path: str) -> list[dict]:
     return events
 
 
-def plot(log_path: str = "orchestrator.log",
-         out: str = "docs/images/thermal-runaway-timeline.png") -> None:
+def plot(
+    log_path: str = "orchestrator.log", out: str = "docs/images/thermal-runaway-timeline.png"
+) -> None:
     events = _load_events(log_path)
 
     times: list[float] = []
@@ -74,8 +77,13 @@ def plot(log_path: str = "orchestrator.log",
 
     axes[2].plot(times, socs, "g-", linewidth=1.5)
     if fault_time is not None:
-        axes[2].axvline(fault_time, color="darkred", linestyle=":",
-                        alpha=0.8, label=f"FAULT at {fault_time:.0f}s")
+        axes[2].axvline(
+            fault_time,
+            color="darkred",
+            linestyle=":",
+            alpha=0.8,
+            label=f"FAULT at {fault_time:.0f}s",
+        )
         axes[2].legend(loc="upper right", fontsize=9)
     axes[2].set_ylabel("SoC")
     axes[2].set_xlabel("Elapsed (s)")

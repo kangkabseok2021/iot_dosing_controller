@@ -23,12 +23,14 @@ _event_log: deque[dict] = deque(maxlen=1000)
 
 
 def record_event(component: str, event: str, **kwargs) -> None:
-    _event_log.append({
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "component": component,
-        "event": event,
-        **kwargs,
-    })
+    _event_log.append(
+        {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "component": component,
+            "event": event,
+            **kwargs,
+        }
+    )
 
 
 def _setup_logging() -> None:
@@ -37,8 +39,7 @@ def _setup_logging() -> None:
     )
     handler.setFormatter(
         logging.Formatter(
-            '{"time":"%(asctime)s","level":"%(levelname)s",'
-            '"name":"%(name)s","msg":"%(message)s"}'
+            '{"time":"%(asctime)s","level":"%(levelname)s","name":"%(name)s","msg":"%(message)s"}'
         )
     )
     logging.getLogger().addHandler(handler)
@@ -55,8 +56,10 @@ async def lifespan(app: FastAPI):
     engine = SequenceEngine(client)
     injector = FaultInjector(client)
     await client.start()
+    injector.start()
     log.info("Orchestrator started — connecting to %s:%d", host, port)
     yield
+    await injector.stop()
     await client.stop()
     log.info("Orchestrator stopped")
 
@@ -84,7 +87,10 @@ async def post_command(cmd: LoadCommand):
 async def start_sequence(seq_id: str):
     if engine is None:
         raise HTTPException(503, "Engine not ready")
-    await engine.start(seq_id)
+    try:
+        await engine.start(seq_id)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc))
     record_event("api", "sequence_started", seq_id=seq_id)
     return {"started": seq_id}
 
@@ -113,8 +119,8 @@ async def inject_fault(body: FaultRequest):
 
 
 @app.get("/api/logs")
-async def get_logs(since: str | None = None):
+async def get_logs(since: datetime | None = None):
     entries = list(_event_log)
     if since:
-        entries = [e for e in entries if e["timestamp"] >= since]
+        entries = [e for e in entries if datetime.fromisoformat(e["timestamp"]) >= since]
     return {"logs": entries}

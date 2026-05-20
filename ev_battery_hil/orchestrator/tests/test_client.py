@@ -1,19 +1,27 @@
 import asyncio
 import json
+
 import pytest
+
 from orchestrator.app.client import OrchestratorClient
 from orchestrator.app.models import TelemetryFrame
 
 _FRAME = {
-    "ts_us": 1000, "SoC": 0.8, "V_terminal": 3.84,
-    "I_load": 50.0, "T_cell": 30.0, "V_RC": 0.025,
-    "state": "DISCHARGING", "fault_code": "NONE",
+    "ts_us": 1000,
+    "SoC": 0.8,
+    "V_terminal": 3.84,
+    "I_load": 50.0,
+    "T_cell": 30.0,
+    "V_RC": 0.025,
+    "state": "DISCHARGING",
+    "fault_code": "NONE",
 }
 
 
 @pytest.fixture
 async def mock_server_port():
     """Start a TCP server that sends 5 telemetry frames then closes."""
+
     async def _handler(reader, writer):
         for _ in range(5):
             writer.write((json.dumps(_FRAME) + "\n").encode())

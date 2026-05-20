@@ -1,14 +1,20 @@
-import pytest
-from httpx import AsyncClient, ASGITransport
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+from httpx import ASGITransport, AsyncClient
 
 from orchestrator.app.main import app
 from orchestrator.app.models import TelemetryFrame
 
 _FRAME = TelemetryFrame(
-    ts_us=1_000_000, SoC=0.8, V_terminal=3.84,
-    I_load=50.0, T_cell=30.0, V_RC=0.025,
-    state="DISCHARGING", fault_code="NONE",
+    ts_us=1_000_000,
+    SoC=0.8,
+    V_terminal=3.84,
+    I_load=50.0,
+    T_cell=30.0,
+    V_RC=0.025,
+    state="DISCHARGING",
+    fault_code="NONE",
 )
 
 
@@ -55,8 +61,7 @@ async def test_post_command_200(api_client):
 
 
 async def test_post_faults_inject_200(api_client):
-    r = await api_client.post("/api/faults/inject",
-                               json={"fault_type": "THERMAL_RUNAWAY"})
+    r = await api_client.post("/api/faults/inject", json={"fault_type": "THERMAL_RUNAWAY"})
     assert r.status_code == 200
     assert r.json()["injected"] == "THERMAL_RUNAWAY"
 

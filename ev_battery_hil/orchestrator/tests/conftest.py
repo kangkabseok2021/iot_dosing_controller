@@ -1,5 +1,7 @@
 import pytest
+
 from orchestrator.app.models import TelemetryFrame
+
 
 @pytest.fixture
 def sample_frame() -> TelemetryFrame:

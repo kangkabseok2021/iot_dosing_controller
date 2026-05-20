@@ -34,8 +34,16 @@ async def _log_snapshot(run_id: str, seq_id: str, frame: Optional[TelemetryFrame
     async with aiosqlite.connect(_DB_PATH) as db:
         await db.execute(
             "INSERT INTO telemetry_snapshots VALUES (?,?,?,?,?,?,?,?)",
-            (run_id, seq_id, frame.ts_us, frame.SoC,
-             frame.V_terminal, frame.I_load, frame.T_cell, frame.state),
+            (
+                run_id,
+                seq_id,
+                frame.ts_us,
+                frame.SoC,
+                frame.V_terminal,
+                frame.I_load,
+                frame.T_cell,
+                frame.state,
+            ),
         )
         await db.commit()
 
@@ -48,6 +56,7 @@ class SequenceRun:
     last_telemetry: Optional[TelemetryFrame] = None
     passed: bool = False
     run_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    task: asyncio.Task | None = field(default=None, repr=False)
 
 
 class SequenceEngine:
@@ -56,28 +65,30 @@ class SequenceEngine:
         self._runs: dict[str, SequenceRun] = {}
 
     def load_sequence(self, seq_id: str) -> dict:
-        path = _SEQUENCES_DIR / f"{seq_id.lower()}.yaml"
+        path = (_SEQUENCES_DIR / f"{seq_id.lower()}.yaml").resolve()
+        if not str(path).startswith(str(_SEQUENCES_DIR.resolve())):
+            raise ValueError(f"Invalid sequence id: {seq_id}")
         if not path.exists():
             raise ValueError(f"Unknown sequence: {seq_id}")
         with open(path) as f:
             return yaml.safe_load(f)
 
     async def start(self, seq_id: str) -> None:
+        if seq_id in self._runs and self._runs[seq_id].running:
+            raise ValueError(f"Sequence {seq_id} is already running")
         spec = self.load_sequence(seq_id)
         run = SequenceRun(seq_id=seq_id, running=True)
         self._runs[seq_id] = run
-        asyncio.create_task(self._run(spec, run))
+        run.task = asyncio.create_task(self._run(spec, run))
 
     async def _run(self, spec: dict, run: SequenceRun) -> None:
-        await _ensure_db()
         repeat = spec.get("repeat", 1)
-        t0 = asyncio.get_event_loop().time()
+        t0 = asyncio.get_running_loop().time()
         try:
+            await _ensure_db()
             for _ in range(repeat):
                 for step in spec["steps"]:
-                    await self._client.send_command(
-                        step["command"], step.get("value")
-                    )
+                    await self._client.send_command(step["command"], step.get("value"))
                     await asyncio.sleep(step.get("duration_s", 0))
                     run.last_telemetry = self._client.last_frame
                     await _log_snapshot(run.run_id, run.seq_id, run.last_telemetry)
@@ -85,7 +96,7 @@ class SequenceEngine:
         except Exception as exc:
             log.error("Sequence %s failed: %s", run.seq_id, exc)
         finally:
-            run.elapsed_s = asyncio.get_event_loop().time() - t0
+            run.elapsed_s = asyncio.get_running_loop().time() - t0
             run.running = False
             await self._client.send_command("SET_CURRENT", 0.0)
 

@@ -38,6 +38,15 @@ class OrchestratorClient:
             except asyncio.CancelledError:
                 pass
 
+    async def disconnect(self) -> None:
+        """Close the current connection; _connect_loop will reconnect automatically."""
+        if self._writer:
+            try:
+                self._writer.close()
+                await self._writer.wait_closed()
+            except Exception:
+                pass
+
     async def send_command(self, command: str, value: str | float | None = None) -> None:
         if not self._writer:
             log.warning("send_command: not connected")

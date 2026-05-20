@@ -29,7 +29,18 @@ async def _watchdog_loop() -> None:
 class FaultInjector:
     def __init__(self, client: OrchestratorClient) -> None:
         self._client = client
-        asyncio.create_task(_watchdog_loop())
+        self._watchdog_task: asyncio.Task | None = None
+
+    def start(self) -> None:
+        self._watchdog_task = asyncio.create_task(_watchdog_loop())
+
+    async def stop(self) -> None:
+        if self._watchdog_task:
+            self._watchdog_task.cancel()
+            try:
+                await self._watchdog_task
+            except asyncio.CancelledError:
+                pass
 
     async def inject(self, fault_type: str, params: dict | None = None) -> None:
         match fault_type:
@@ -49,13 +60,7 @@ class FaultInjector:
     async def _sensor_dropout(self, params: dict) -> None:
         duration = float(params.get("duration_s", 5))
         log.info("Injecting SENSOR_DROPOUT for %.0fs", duration)
-        writer = self._client._writer
-        if writer:
-            try:
-                writer.close()
-                await writer.wait_closed()
-            except Exception:
-                pass
+        await self._client.disconnect()
         await asyncio.sleep(duration)
         log.info("SENSOR_DROPOUT complete — client reconnect in progress")
 
