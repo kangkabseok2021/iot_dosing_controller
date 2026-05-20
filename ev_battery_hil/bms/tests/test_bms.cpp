@@ -113,7 +113,9 @@ TEST(BmsStateMachineTest, SocUndervoltageTriggersProtection) {
 
 TEST(BmsStateMachineTest, WarnFiresBeforeFaultOnThermalRunaway) {
     // I=50A, block_cool=true: P_heat=25W, P_cool=0
-    // dT/dt = 25/25000 = 0.001°C/step  →  T_WARN=60°C at ~35000 steps, T_FAULT=80°C at ~55000
+    // Thermal rise: dT/step=25×1e-3/25000=0.000001°C — T_WARN unreachable in 200k steps.
+    // WARN fires via energy accumulator: E=I²·R0·DT=0.025J/step → E_WARN=875J at ~35000 steps.
+    // FAULT fires via energy accumulator: E_FAULT=1375J at ~55000 steps.
     BmsStateMachine fsm;
     auto s = make_state(0.8, 50.0, 25.0, /*block_cool=*/true);
     int warned_step = -1;

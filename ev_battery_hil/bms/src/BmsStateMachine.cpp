@@ -30,7 +30,7 @@ bool BmsStateMachine::update(BatteryState& s) {
         return false;
     }
 
-    FaultCode fc = model_.step(s);
+    FaultCode fc = model_.step(s);  // s.i_load is read-only in model_.step()
 
     // Accumulate Joule heating energy (I²·R₀·Δt) for thermal runaway detection
     joule_energy_ += s.i_load * s.i_load * BatteryModel::R0 * BatteryModel::DT;

@@ -36,6 +36,8 @@ private:
     BmsState     state_{BmsState::IDLE};
     FaultCode    fault_code_{FaultCode::NONE};
     std::string  fault_detail_;
+    // NOTE: warned_ and joule_energy_ are written by update() (physics thread) and reset by
+    // reset() (TCP thread). Not mutex-protected — acceptable for this portfolio demo.
     bool         warned_{false};
     double       joule_energy_{0.0};  // cumulative I²R₀·Δt [J]
 
