@@ -1,0 +1,58 @@
+name: Grid Load Forecasting CI
+
+on:
+  push:
+    branches: [main]
+    paths: [grid_load_forecasting/**]
+  pull_request:
+    branches: [main]
+    paths: [grid_load_forecasting/**]
+
+defaults:
+  run:
+    working-directory: grid_load_forecasting
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --frozen
+      - run: uv run ruff check app/ tests/ scripts/
+      - run: uv run black --check app/ tests/ scripts/
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --frozen
+      - run: uv run pytest tests/test_api.py tests/test_forecaster.py -q --asyncio-mode=auto --tb=short
+
+  math-accuracy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --frozen
+      - name: SMA correctness — isolated from infrastructure
+        run: uv run pytest tests/test_forecaster.py -v --tb=short
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --frozen
+
+      - name: Build and start docker compose stack
+        run: docker compose up -d --wait
+        timeout-minutes: 5
+
+      - name: Run integration tests
+        run: uv run pytest tests/test_integration.py -v --tb=short -m integration
+
+      - name: Tear down stack
+        if: always()
+        run: docker compose down -v
