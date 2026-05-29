@@ -1,11 +1,12 @@
-# IoT Dosing Controller & EV Battery HIL Test Simulator
+# IoT Dosing Controller, EV Battery HIL Simulator & Machine Sensor Analytics
 
-Two embedded systems projects sharing a C++17 ARM64 daemon pattern and Python asyncio orchestration layer.
+A collection of industrial IoT and predictive maintenance systems sharing edge daemon architectures, asyncio orchestration, and machine learning telemetry pipelines.
 
 | Project | Description | Docs |
 |---|---|---|
 | **Edge IoT Dosing Controller** | C++17 Modbus TCP daemon + Python PLC simulator + FastAPI dashboard — deploys to Raspberry Pi 4 via Ansible | [Architecture ↓](#architecture) |
 | **EV Battery HIL Test Simulator** | C++17 Thevenin ECM battery daemon + Python asyncio orchestrator with FastAPI, fault injection, and GitHub Actions ARM64 CI | [ev_battery_hil/README.md](ev_battery_hil/README.md) |
+| **SLM Machine Sensor Analytics** | Multi-sensor telemetry ingestion, statistical feature extraction (RMS/Kurtosis), and Isolation Forest anomaly detection API | [slm_sensor_analytics/README.md](slm_sensor_analytics/README.md) |
 
 ---
 
@@ -130,6 +131,18 @@ iot_dosing_controller/
 │   ├── systemd/             #   bms-daemon.service + orchestrator.service
 │   ├── scripts/             #   deploy.sh + run-smoke-test.sh
 │   └── README.md
+├── slm_sensor_analytics/    # ── SLM Machine Sensor Analytics ──────────
+│   ├── app/                 #   FastAPI backend app code
+│   │   ├── api/v1/          #     REST routes and schemas
+│   │   ├── db/              #     PostgreSQL models and session setup
+│   │   ├── repositories/    #     Database repositories
+│   │   ├── services/        #     Feature extraction & anomaly models
+│   │   └── main.py          #     App initialization
+│   ├── migrations/          #   Alembic DB migrations
+│   ├── tests/               #   26 pytest tests (SQLite in-memory)
+│   ├── Dockerfile           #   Multi-stage build
+│   ├── docker-compose.yml   #   Docker compose (app + postgres db)
+│   └── README.md            #   Subproject documentation
 └── .github/workflows/
     ├── ci.yml               # Dosing controller CI
     └── ev-battery-hil.yml   # EV Battery HIL CI (python-lint + python-test + ARM64)

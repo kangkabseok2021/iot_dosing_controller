@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: slm_sensor_analytics/Dockerfile
+    container_name: slm_sensor_analytics_api
+    ports:
+      - "8001:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://slm:slm@db:5432/slmdb
+      - MODEL_DIR=/app/models
+      - LOG_LEVEL=INFO
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - model_data:/app/models
+
+  db:
+    image: postgres:16-alpine
+    container_name: slm_sensor_analytics_db
+    environment:
+      - POSTGRES_USER=slm
+      - POSTGRES_PASSWORD=slm
+      - POSTGRES_DB=slmdb
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U slm -d slmdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  model_data:
