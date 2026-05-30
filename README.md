@@ -1,12 +1,13 @@
-# IoT Dosing Controller, EV Battery HIL Simulator & Machine Sensor Analytics
+# IoT Dosing Controller, EV Battery HIL Simulator, Machine Sensor Analytics & Fleet Routing API
 
-A collection of industrial IoT and predictive maintenance systems sharing edge daemon architectures, asyncio orchestration, and machine learning telemetry pipelines.
+A collection of industrial IoT, predictive maintenance, and logistics systems sharing edge daemon architectures, asyncio orchestration, and machine learning telemetry pipelines.
 
 | Project | Description | Docs |
 |---|---|---|
 | **Edge IoT Dosing Controller** | C++17 Modbus TCP daemon + Python PLC simulator + FastAPI dashboard — deploys to Raspberry Pi 4 via Ansible | [Architecture ↓](#architecture) |
 | **EV Battery HIL Test Simulator** | C++17 Thevenin ECM battery daemon + Python asyncio orchestrator with FastAPI, fault injection, and GitHub Actions ARM64 CI | [ev_battery_hil/README.md](ev_battery_hil/README.md) |
 | **SLM Machine Sensor Analytics** | Multi-sensor telemetry ingestion, statistical feature extraction (RMS/Kurtosis), and Isolation Forest anomaly detection API | [slm_sensor_analytics/README.md](slm_sensor_analytics/README.md) |
+| **Secure Logistics Fleet Routing API** | FastAPI + JWT RBAC + Haversine O(n²) VRP optimizer + Redis route cache (TTL 300 s) + SQLAlchemy fleet schema — 24 pytest tests at 94.5% coverage | [fleet_routing_api/README.md](fleet_routing_api/README.md) |
 
 ---
 
@@ -143,9 +144,21 @@ iot_dosing_controller/
 │   ├── Dockerfile           #   Multi-stage build
 │   ├── docker-compose.yml   #   Docker compose (app + postgres db)
 │   └── README.md            #   Subproject documentation
+├── fleet_routing_api/       # ── Secure Logistics Fleet Routing API ─────────
+│   ├── app/
+│   │   ├── auth/            #   JWT HS256 — create/decode tokens, dispatcher gate
+│   │   ├── api/             #   auth / deliveries / routes routers
+│   │   ├── db/              #   SQLAlchemy models: Vehicle, Driver, Delivery, Waypoint
+│   │   └── routing/         #   haversine.py + optimizer.py (nearest-neighbour VRP)
+│   ├── tests/               #   24 pytest tests (94.5% coverage, SQLite override)
+│   ├── docs/ROUTING-MATH.md #   Haversine derivation + O(n²) complexity + optimality gap
+│   ├── Dockerfile           #   Multi-stage build
+│   ├── docker-compose.yml   #   API + PostgreSQL 16 + Redis 7
+│   └── README.md
 └── .github/workflows/
-    ├── ci.yml               # Dosing controller CI
-    └── ev-battery-hil.yml   # EV Battery HIL CI (python-lint + python-test + ARM64)
+    ├── ci.yml                    # Dosing controller CI
+    ├── ev-battery-hil.yml        # EV Battery HIL CI (python-lint + python-test + ARM64)
+    └── fleet-routing-api.yml     # Fleet Routing API CI (flake8 + pytest, SQLite)
 ```
 
 ---
@@ -250,6 +263,13 @@ uv run pytest tests/ -v --tb=short
 | `python-lint`       | ubuntu-latest | ruff check + ruff format on orchestrator/                 |
 | `python-test`       | ubuntu-latest | 19 pytest tests (mock TCP server, no daemon needed)       |
 | `cpp-cross-compile` | ubuntu-latest | Cross-compile `bms_daemon` for ARM64, upload artifact     |
+
+### Fleet Routing API (`.github/workflows/fleet-routing-api.yml`) — triggers on `fleet_routing_api/**`
+
+| Job     | Runner        | What it does                                                    |
+|---------|---------------|-----------------------------------------------------------------|
+| `lint`  | ubuntu-latest | flake8 (max-line-length=100) on app/ and tests/                 |
+| `test`  | ubuntu-latest | 24 pytest tests — SQLite override, ≥90% coverage enforced      |
 
 ---
 
