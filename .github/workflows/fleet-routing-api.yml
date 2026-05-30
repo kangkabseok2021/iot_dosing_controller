@@ -1,0 +1,34 @@
+name: Fleet Routing API CI
+
+on:
+  push:
+    branches: [main]
+    paths: [fleet_routing_api/**]
+  pull_request:
+    branches: [main]
+    paths: [fleet_routing_api/**]
+
+defaults:
+  run:
+    working-directory: fleet_routing_api
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --frozen
+      - run: uv run flake8 app/ tests/
+
+  test:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: sqlite:///./test.db
+      REDIS_URL: redis://localhost:6379/0
+      JWT_SECRET: ci-test-secret-at-least-32-chars-long
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --frozen
+      - run: uv run pytest tests/ -v --cov-fail-under=90
