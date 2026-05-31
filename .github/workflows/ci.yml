@@ -17,6 +17,20 @@ jobs:
       - run: uv run ruff check api/ collector/ plc_simulator/ tests/
       - run: uv run ruff format --check api/ collector/ plc_simulator/ tests/
 
+  # ── AWS Sensor API — 15 pytest (API + repo + S3 archival with moto) ─────────
+  aws-sensor-api-test:
+    name: AWS Sensor API — 15 pytest (API · repository · moto S3)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - name: Install deps
+        run: uv sync --frozen
+        working-directory: aws_sensor_api
+      - name: Run pytest
+        run: uv run pytest tests/ -v --tb=short
+        working-directory: aws_sensor_api
+
   # ── Python tests (no C++ daemon, no Modbus broker) ────────────────────────
   python-tests:
     runs-on: ubuntu-latest
