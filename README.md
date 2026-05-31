@@ -5,9 +5,9 @@ A collection of industrial IoT, predictive maintenance, logistics, and cloud-nat
 | Project | Description | Docs |
 |---|---|---|
 | **Edge IoT Dosing Controller** | C++17 Modbus TCP daemon + Python PLC simulator + FastAPI dashboard — deploys to Raspberry Pi 4 via Ansible | [Architecture ↓](#architecture) |
-| **EV Battery HIL Test Simulator** | C++17 Thevenin ECM battery daemon + Python asyncio orchestrator with FastAPI, fault injection, and GitHub Actions ARM64 CI | [ev_battery_hil/README.md](ev_battery_hil/README.md) |
-| **SLM Machine Sensor Analytics** | Multi-sensor telemetry ingestion, statistical feature extraction (RMS/Kurtosis), and Isolation Forest anomaly detection API | [slm_sensor_analytics/README.md](slm_sensor_analytics/README.md) |
-| **Secure Logistics Fleet Routing API** | FastAPI + JWT RBAC + Haversine O(n²) VRP optimizer + Redis route cache (TTL 300 s) + SQLAlchemy fleet schema — 24 pytest tests at 94.5% coverage | [fleet_routing_api/README.md](fleet_routing_api/README.md) |
+| **EV Battery HIL Test Simulator** | C++17 Thevenin ECM battery daemon + Python asyncio orchestrator with FastAPI, fault injection, and GitHub Actions ARM64 CI | [docs/ev-battery-hil.md](docs/ev-battery-hil.md) |
+| **SLM Machine Sensor Analytics** | Multi-sensor telemetry ingestion, statistical feature extraction (RMS/Kurtosis), and Isolation Forest anomaly detection API | [docs/slm-sensor-analytics.md](docs/slm-sensor-analytics.md) |
+| **Secure Logistics Fleet Routing API** | FastAPI + JWT RBAC + Haversine O(n²) VRP optimizer + Redis route cache (TTL 300 s) + SQLAlchemy fleet schema — 24 pytest tests at 94.5% coverage | [docs/fleet-routing-api.md](docs/fleet-routing-api.md) |
 | **Cloud-Native Python Backend on AWS** | FastAPI + async SQLAlchemy 2.0 + S3 archival (boto3/asyncio.to_thread) + 4-module Terraform IaC (VPC · ECS Fargate · RDS PostgreSQL 16 · S3/IAM) — 15 pytest at 93% coverage via moto + aiosqlite | [docs/aws-sensor-api.md](docs/aws-sensor-api.md) |
 
 ---
