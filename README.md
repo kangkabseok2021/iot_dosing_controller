@@ -1,6 +1,6 @@
-# IoT Dosing Controller, EV Battery HIL Simulator, Machine Sensor Analytics & Fleet Routing API
+# IoT Dosing Controller, EV Battery HIL, SLM Sensor Analytics, Fleet Routing API & AWS Sensor API
 
-A collection of industrial IoT, predictive maintenance, and logistics systems sharing edge daemon architectures, asyncio orchestration, and machine learning telemetry pipelines.
+A collection of industrial IoT, predictive maintenance, logistics, and cloud-native backend systems sharing edge daemon architectures, asyncio orchestration, and machine learning telemetry pipelines.
 
 | Project | Description | Docs |
 |---|---|---|
@@ -8,6 +8,7 @@ A collection of industrial IoT, predictive maintenance, and logistics systems sh
 | **EV Battery HIL Test Simulator** | C++17 Thevenin ECM battery daemon + Python asyncio orchestrator with FastAPI, fault injection, and GitHub Actions ARM64 CI | [ev_battery_hil/README.md](ev_battery_hil/README.md) |
 | **SLM Machine Sensor Analytics** | Multi-sensor telemetry ingestion, statistical feature extraction (RMS/Kurtosis), and Isolation Forest anomaly detection API | [slm_sensor_analytics/README.md](slm_sensor_analytics/README.md) |
 | **Secure Logistics Fleet Routing API** | FastAPI + JWT RBAC + Haversine O(n²) VRP optimizer + Redis route cache (TTL 300 s) + SQLAlchemy fleet schema — 24 pytest tests at 94.5% coverage | [fleet_routing_api/README.md](fleet_routing_api/README.md) |
+| **Cloud-Native Python Backend on AWS** | FastAPI + async SQLAlchemy 2.0 + S3 archival (boto3/asyncio.to_thread) + 4-module Terraform IaC (VPC · ECS Fargate · RDS PostgreSQL 16 · S3/IAM) — 15 pytest at 93% coverage via moto + aiosqlite | [docs/aws-sensor-api.md](docs/aws-sensor-api.md) |
 
 ---
 
@@ -155,8 +156,25 @@ iot_dosing_controller/
 │   ├── Dockerfile           #   Multi-stage build
 │   ├── docker-compose.yml   #   API + PostgreSQL 16 + Redis 7
 │   └── README.md
+├── aws_sensor_api/          # ── Cloud-Native Python Backend on AWS ─────────
+│   ├── app/
+│   │   ├── db/              #   ORM models (SensorEvent) + async session
+│   │   ├── main.py          #   FastAPI — POST /api/v1/events · GET list + by-id · /health
+│   │   ├── repository.py    #   EventRepository — insert · list(filter/paginate) · set_s3_key
+│   │   ├── schemas.py       #   Pydantic v2 — SensorEventCreate · Response · Paginated
+│   │   └── archival.py      #   S3Archiver — boto3 in asyncio.to_thread, fire-and-forget
+│   ├── tests/               #   15 pytest — moto @mock_aws (S3) · aiosqlite (DB) · ASGITransport
+│   ├── terraform/           #   4 modules: vpc · ecs · rds · s3_iam + S3 remote state
+│   │   └── modules/
+│   │       ├── vpc/         #   VPC · public+private subnets · NAT gateway
+│   │       ├── ecs/         #   Fargate cluster · ECR · ALB · task definition · IAM roles
+│   │       ├── rds/         #   PostgreSQL 16 · SSM password · private subnet SG
+│   │       └── s3_iam/      #   S3 bucket (versioned/AES256/Glacier) · least-privilege policy
+│   ├── docker/Dockerfile    #   multi-stage, python:3.12-slim-bookworm
+│   ├── pyproject.toml       #   standalone uv project
+│   └── docs/aws-sensor-api.md  #   architecture · Terraform modules · test patterns
 └── .github/workflows/
-    ├── ci.yml                    # Dosing controller CI
+    ├── ci.yml                    # Dosing controller CI + aws-sensor-api-test (15 pytest, moto)
     ├── ev-battery-hil.yml        # EV Battery HIL CI (python-lint + python-test + ARM64)
     └── fleet-routing-api.yml     # Fleet Routing API CI (flake8 + pytest, SQLite)
 ```
@@ -249,12 +267,13 @@ uv run pytest tests/ -v --tb=short
 
 ### Dosing Controller (`.github/workflows/ci.yml`)
 
-| Job               | Runner        | What it does                                             |
-|-------------------|---------------|----------------------------------------------------------|
-| `lint`            | ubuntu-latest | ruff check + ruff format on all Python                   |
-| `python-tests`    | ubuntu-latest | 14 pytest tests (in-memory SQLite, no daemon)            |
-| `cpp-build-test`  | ubuntu-latest | CMake build + 13 GoogleTests with libmodbus from apt     |
-| `arm64-cross-build` | ubuntu-latest | Cross-compile `dosing_core` for aarch64 (no libmodbus) |
+| Job                    | Runner        | What it does                                             |
+|------------------------|---------------|----------------------------------------------------------|
+| `lint`                 | ubuntu-latest | ruff check + ruff format on all Python                   |
+| `aws-sensor-api-test`  | ubuntu-latest | 15 pytest — moto S3 + aiosqlite + ASGITransport (93% cov) |
+| `python-tests`         | ubuntu-latest | 14 pytest tests (in-memory SQLite, no daemon)            |
+| `cpp-build-test`       | ubuntu-latest | CMake build + 13 GoogleTests with libmodbus from apt     |
+| `arm64-cross-build`    | ubuntu-latest | Cross-compile `dosing_core` for aarch64 (no libmodbus)   |
 
 ### EV Battery HIL (`.github/workflows/ev-battery-hil.yml`) — triggers on `ev_battery_hil/**`
 
@@ -283,5 +302,6 @@ uv run pytest tests/ -v --tb=short
 | Persistence  | SQLite 3 (WAL mode)                     |
 | REST API     | Python, FastAPI, uvicorn                |
 | Dashboard    | Vanilla JS, Chart.js, nginx             |
-| DevOps       | Docker Compose, Ansible, GitHub Actions |
-| Targets      | x86_64 (CI/dev), ARM64 (Raspberry Pi 4)|
+| DevOps       | Docker Compose, Ansible, GitHub Actions, Terraform |
+| Cloud        | AWS ECS Fargate, RDS PostgreSQL 16, S3, ECR, ALB   |
+| Targets      | x86_64 (CI/dev), ARM64 (Raspberry Pi 4)            |
