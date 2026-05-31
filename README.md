@@ -123,56 +123,57 @@ iot_dosing_controller/
 │   │   └── CMakeLists.txt
 │   ├── orchestrator/        #   Python asyncio orchestrator (19 pytest)
 │   │   ├── app/
-│   │   │   ├── client.py          # asyncio TCP + reconnect
-│   │   │   ├── sequences.py       # YAML drive cycles + SQLite log
+│   │   │   ├── client.py          # asyncio TCP + exponential-backoff reconnect
+│   │   │   ├── sequences.py       # YAML drive cycles + SQLite telemetry log
 │   │   │   ├── fault_injector.py  # THERMAL_RUNAWAY / SENSOR_DROPOUT / OVERCURRENT
 │   │   │   └── main.py            # FastAPI + lifespan
-│   │   ├── sequences/             # 4 YAML test sequences
-│   │   └── tests/                 # 19 pytest tests
+│   │   ├── sequences/             # 4 YAML sequences (CONSTANT_DISCHARGE, ACCEL_PULSE, …)
+│   │   └── tests/                 # 19 pytest tests (mock TCP server, no real daemon)
 │   ├── cmake/toolchain-arm64.cmake
 │   ├── systemd/             #   bms-daemon.service + orchestrator.service
 │   ├── scripts/             #   deploy.sh + run-smoke-test.sh
-│   └── README.md
+│   └── docs/ev-battery-hil.md     # Architecture · BMS FSM · fault injection · 30-test breakdown
 ├── slm_sensor_analytics/    # ── SLM Machine Sensor Analytics ──────────
-│   ├── app/                 #   FastAPI backend app code
-│   │   ├── api/v1/          #     REST routes and schemas
-│   │   ├── db/              #     PostgreSQL models and session setup
-│   │   ├── repositories/    #     Database repositories
-│   │   ├── services/        #     Feature extraction & anomaly models
-│   │   └── main.py          #     App initialization
+│   ├── app/
+│   │   ├── api/v1/          #   REST routes and schemas
+│   │   ├── db/              #   SQLAlchemy models + async session
+│   │   ├── repositories/    #   SensorReadingRepository · AlertRepository
+│   │   ├── services/        #   FeatureExtractor (mean/std/RMS/P2P/kurtosis) · IsolationForest
+│   │   └── main.py
 │   ├── migrations/          #   Alembic DB migrations
-│   ├── tests/               #   26 pytest tests (SQLite in-memory)
-│   ├── Dockerfile           #   Multi-stage build
-│   ├── docker-compose.yml   #   Docker compose (app + postgres db)
-│   └── README.md            #   Subproject documentation
+│   ├── tests/               #   26 pytest tests (aiosqlite in-memory)
+│   ├── Dockerfile
+│   ├── docker-compose.yml   #   app + PostgreSQL
+│   └── docs/slm-sensor-analytics.md  # Architecture · feature math table · 26-test breakdown
 ├── fleet_routing_api/       # ── Secure Logistics Fleet Routing API ─────────
 │   ├── app/
-│   │   ├── auth/            #   JWT HS256 — create/decode tokens, dispatcher gate
+│   │   ├── auth/            #   JWT HS256 — token issue + dispatcher role gate
 │   │   ├── api/             #   auth / deliveries / routes routers
-│   │   ├── db/              #   SQLAlchemy models: Vehicle, Driver, Delivery, Waypoint
-│   │   └── routing/         #   haversine.py + optimizer.py (nearest-neighbour VRP)
-│   ├── tests/               #   24 pytest tests (94.5% coverage, SQLite override)
-│   ├── docs/ROUTING-MATH.md #   Haversine derivation + O(n²) complexity + optimality gap
-│   ├── Dockerfile           #   Multi-stage build
-│   ├── docker-compose.yml   #   API + PostgreSQL 16 + Redis 7
-│   └── README.md
+│   │   ├── db/              #   SQLAlchemy: Vehicle · Driver · Delivery · Waypoint (FK cascade)
+│   │   └── routing/         #   haversine.py · optimizer.py (nearest-neighbour VRP, O(n²))
+│   ├── tests/               #   24 pytest tests — 94.5% coverage, SQLite override
+│   ├── docs/
+│   │   ├── fleet-routing-api.md   # Architecture · Haversine formula · VRP · 24-test breakdown
+│   │   └── ROUTING-MATH.md        # Full formula derivation + complexity analysis
+│   ├── Dockerfile
+│   └── docker-compose.yml   #   API + PostgreSQL 16 + Redis 7
 ├── aws_sensor_api/          # ── Cloud-Native Python Backend on AWS ─────────
 │   ├── app/
-│   │   ├── db/              #   ORM models (SensorEvent) + async session
-│   │   ├── main.py          #   FastAPI — POST /api/v1/events · GET list + by-id · /health
+│   │   ├── db/              #   SensorEvent ORM + async session
+│   │   ├── main.py          #   FastAPI — POST /api/v1/events · GET list + by-id · /health · /metrics
 │   │   ├── repository.py    #   EventRepository — insert · list(filter/paginate) · set_s3_key
 │   │   ├── schemas.py       #   Pydantic v2 — SensorEventCreate · Response · Paginated
-│   │   └── archival.py      #   S3Archiver — boto3 in asyncio.to_thread, fire-and-forget
-│   ├── tests/               #   15 pytest — moto @mock_aws (S3) · aiosqlite (DB) · ASGITransport
+│   │   └── archival.py      #   S3Archiver — boto3/asyncio.to_thread fire-and-forget
+│   ├── tests/               #   15 pytest — moto @mock_aws · aiosqlite · ASGITransport (93% cov)
 │   ├── terraform/           #   4 modules: vpc · ecs · rds · s3_iam + S3 remote state
 │   │   └── modules/
 │   │       ├── vpc/         #   VPC · public+private subnets · NAT gateway
-│   │       ├── ecs/         #   Fargate cluster · ECR · ALB · task definition · IAM roles
+│   │       ├── ecs/         #   Fargate cluster · ECR · ALB · task def · IAM roles
 │   │       ├── rds/         #   PostgreSQL 16 · SSM password · private subnet SG
 │   │       └── s3_iam/      #   S3 bucket (versioned/AES256/Glacier) · least-privilege policy
 │   ├── docker/Dockerfile    #   multi-stage, python:3.12-slim-bookworm
 │   ├── pyproject.toml       #   standalone uv project
-│   └── docs/aws-sensor-api.md  #   architecture · Terraform modules · test patterns
+│   └── docs/aws-sensor-api.md  # Architecture · Terraform modules · boto3/thread rationale
 └── .github/workflows/
     ├── ci.yml                    # Dosing controller CI + aws-sensor-api-test (15 pytest, moto)
     ├── ev-battery-hil.yml        # EV Battery HIL CI (python-lint + python-test + ARM64)
@@ -207,6 +208,92 @@ ansible-playbook -i ansible/inventory/rpi.ini ansible/site.yml
 ```
 
 The playbook installs Docker, cross-compiles the C++ daemon, deploys the systemd unit, and starts the Docker stack.
+
+### EV Battery HIL Test Simulator
+
+```bash
+# Build BMS C++ daemon (native x86_64)
+cmake -B ev_battery_hil/bms/build -S ev_battery_hil/bms -DCMAKE_BUILD_TYPE=Release
+cmake --build ev_battery_hil/bms/build -j$(nproc)
+ctest --test-dir ev_battery_hil/bms/build --output-on-failure -V   # 11 GoogleTests
+
+# ARM64 cross-compile (Raspberry Pi 4 / i.MX 8M)
+sudo apt-get install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+cmake -B ev_battery_hil/bms/build-arm64 -S ev_battery_hil/bms \
+  -DCMAKE_TOOLCHAIN_FILE=ev_battery_hil/cmake/toolchain-arm64.cmake \
+  -DBUILD_TESTING=OFF
+cmake --build ev_battery_hil/bms/build-arm64 --target bms_daemon -j$(nproc)
+
+# Run Python orchestrator tests (no real daemon — mock TCP server)
+cd ev_battery_hil && uv run pytest orchestrator/ -v   # 19 pytest
+
+# Run the full stack
+./ev_battery_hil/bms/build/bms_daemon 5555 &
+cd ev_battery_hil && BMS_HOST=localhost BMS_PORT=5555 \
+  uv run uvicorn orchestrator.app.main:app --port 8080
+```
+
+### SLM Machine Sensor Analytics
+
+```bash
+# Run tests (aiosqlite in-memory, no Docker required)
+PYTHONPATH=slm_sensor_analytics uv run pytest slm_sensor_analytics -v   # 26 pytest
+
+# Full stack (FastAPI + PostgreSQL)
+cd slm_sensor_analytics && docker compose up -d
+# Swagger UI: http://localhost:8001/docs
+# Metrics:    http://localhost:8001/api/v1/metrics
+
+# Ingest → train → predict
+curl -X POST http://localhost:8001/api/v1/ingest \
+  -H "Content-Type: application/json" \
+  -d '{"device_id":"CNC-01","sensor_type":"vibration","values":[0.1,0.2,0.15],"timestamp":"2026-01-15T08:00:00Z"}'
+curl -X POST "http://localhost:8001/api/v1/train?device_id=CNC-01&sensor_type=vibration"
+curl -X POST "http://localhost:8001/api/v1/predict?device_id=CNC-01&sensor_type=vibration"
+```
+
+### Secure Logistics Fleet Routing API
+
+```bash
+# Run tests (SQLite in-memory, no Docker required)
+cd fleet_routing_api && uv run pytest tests/ -v   # 24 pytest at 94.5% coverage
+
+# Full stack (FastAPI + PostgreSQL + Redis)
+cd fleet_routing_api && docker compose up -d
+# Swagger UI: http://localhost:8000/docs
+
+# Get a dispatcher token and optimise a route
+TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"username":"dispatcher1","password":"dispatch123"}' | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
+curl -X POST http://localhost:8000/api/v1/routes \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"depot_lat":51.5074,"depot_lon":-0.1278,"waypoints":[{"id":1,"lat":48.8566,"lon":2.3522},{"id":2,"lat":52.5200,"lon":13.4050}]}'
+```
+
+### Cloud-Native Python Backend on AWS
+
+```bash
+# Run tests (no real AWS needed — moto + aiosqlite)
+cd aws_sensor_api && uv run pytest tests/ -v   # 15 pytest at 93% coverage
+
+# Run locally (SQLite for dev)
+cd aws_sensor_api
+DATABASE_URL=sqlite+aiosqlite:///./dev.db S3_BUCKET=local-test \
+  uv run uvicorn app.main:app --reload --port 8080
+
+# Provision AWS infrastructure
+cd aws_sensor_api/terraform
+terraform init
+terraform plan -var env=dev
+terraform apply -var env=dev
+
+# Post a sensor event
+curl -X POST http://<alb-dns>/api/v1/events \
+  -H "Content-Type: application/json" \
+  -d '{"plant_id":"PLT-001","sensor_id":"TEMP-A","timestamp":"2026-01-15T08:00:00Z","value":85.3,"unit":"°C"}'
+```
 
 ---
 
