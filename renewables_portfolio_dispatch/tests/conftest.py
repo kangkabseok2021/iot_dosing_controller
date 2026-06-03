@@ -59,9 +59,13 @@ async def pg_client():
     engine = create_async_engine(_PG_URL, echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # TimescaleDB: all unique constraints must include the partition column.
+        # Recreate the telemetry PK as (id, measured_at) before create_hypertable.
         await conn.execute(
             text(
                 """
+                ALTER TABLE telemetry DROP CONSTRAINT IF EXISTS telemetry_pkey;
+                ALTER TABLE telemetry ADD PRIMARY KEY (id, measured_at);
                 DO $$
                 BEGIN
                     IF EXISTS (
