@@ -65,9 +65,9 @@ async def test_ingest_rejects_over_capacity(client):
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(os.getenv("USE_TIMESCALEDB") != "1", reason="Requires TimescaleDB")
-async def test_hypertable_partitioning_query(client):
+async def test_hypertable_partitioning_query(pg_client):
     """Asserts chunk_count > 0 after inserting 8+ days of data (TimescaleDB only)."""
-    asset = await _make_asset(client, name="TS-Asset", capacity_mw=100.0)
+    asset = await _make_asset(pg_client, name="TS-Asset", capacity_mw=100.0)
     base = datetime(2024, 1, 1, tzinfo=UTC)
     rows = [
         {
@@ -77,8 +77,8 @@ async def test_hypertable_partitioning_query(client):
         }
         for h in range(8 * 24)  # 8 days × 1-hour intervals
     ]
-    await client.post("/api/telemetry", json={"rows": rows})
-    resp = await client.get("/api/telemetry/chunks")
+    await pg_client.post("/api/telemetry", json={"rows": rows})
+    resp = await pg_client.get("/api/telemetry/chunks")
     assert resp.status_code == 200
     assert resp.json()["chunk_count"] > 0
 
