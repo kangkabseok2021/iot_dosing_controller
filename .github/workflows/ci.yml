@@ -58,6 +58,54 @@ jobs:
       - name: Run GoogleTests (13 tests)
         run: ctest --test-dir controller/build --output-on-failure -V
 
+  # ── Renewables Portfolio Dispatch — 25 pytest-asyncio ─────────────────────
+  renewables-dispatch-test:
+    name: Renewables dispatch — ruff · mypy · 25 pytest-asyncio
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: renewables_portfolio_dispatch
+
+    services:
+      postgres:
+        image: timescale/timescaledb:latest-pg16
+        env:
+          POSTGRES_DB: dispatch
+          POSTGRES_USER: dispatch
+          POSTGRES_PASSWORD: dispatch
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports: ["5432:5432"]
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: ruff lint + format check
+        run: |
+          uv run ruff check app/ tests/
+          uv run ruff format --check app/ tests/
+
+      - name: mypy strict
+        run: uv run mypy app/ --ignore-missing-imports
+
+      - name: Run 25 pytest-asyncio tests
+        env:
+          DATABASE_URL: postgresql+asyncpg://dispatch:dispatch@localhost:5432/dispatch
+          REDIS_URL: redis://localhost:6379/0
+          CELERY_BROKER_URL: redis://localhost:6379/1
+          USE_TIMESCALEDB: "1"
+        run: uv run pytest tests/ -v --tb=short
+
   # ── ARM64 cross-compile ────────────────────────────────────────────────────
   arm64-cross-build:
     runs-on: ubuntu-latest
