@@ -3,18 +3,18 @@ from __future__ import annotations
 
 import json
 import time
-from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock, patch
+from datetime import UTC, datetime, timedelta
+from unittest.mock import patch
 
 import pytest
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _old_iso(hours: int = 2) -> str:
-    return (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+    return (datetime.now(UTC) - timedelta(hours=hours)).isoformat()
 
 
 @pytest.mark.asyncio
@@ -58,7 +58,7 @@ async def test_reopt_ignores_stale_messages():
 async def test_reopt_worker_subscribes_correct_channel():
     """start_deviation_subscriber subscribes to 'measurements.deviation'."""
     import fakeredis
-    from app.reopt.worker import start_deviation_subscriber
+
 
     server = fakeredis.FakeServer()
     fake = fakeredis.FakeRedis(server=server, decode_responses=True)
@@ -83,7 +83,6 @@ async def test_reopt_worker_subscribes_correct_channel():
 @pytest.mark.asyncio
 async def test_intraday_reforecast_task_runs():
     """intraday_reforecast Celery task returns a valid result dict when called directly."""
-    import asyncio
 
     from app.reopt.worker import _reopt_cycle
 
@@ -96,6 +95,7 @@ async def test_intraday_reforecast_task_runs():
 async def test_deviation_threshold_publishes_message():
     """publish_deviation posts to 'measurements.deviation' with correct fields."""
     import fakeredis
+
     from app.reopt.worker import publish_deviation
 
     server = fakeredis.FakeServer()

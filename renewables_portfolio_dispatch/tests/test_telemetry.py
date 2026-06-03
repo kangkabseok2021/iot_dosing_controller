@@ -3,11 +3,9 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
-import pytest_asyncio
-
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -39,7 +37,7 @@ async def test_create_asset_invalid_capacity(client):
 @pytest.mark.asyncio
 async def test_ingest_telemetry_bulk(client):
     asset = await _make_asset(client, name="Wind-Bulk", capacity_mw=80.0)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     rows = [
         {"asset_id": asset["id"], "measured_at": (now + timedelta(minutes=15 * i)).isoformat(),
          "power_mw": float(i * 5)}
@@ -53,7 +51,7 @@ async def test_ingest_telemetry_bulk(client):
 @pytest.mark.asyncio
 async def test_ingest_rejects_over_capacity(client):
     asset = await _make_asset(client, name="Wind-OverCap", capacity_mw=30.0)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     rows = [{"asset_id": asset["id"], "measured_at": now.isoformat(), "power_mw": 999.0}]
     resp = await client.post("/api/telemetry", json={"rows": rows})
     assert resp.status_code == 422
@@ -66,7 +64,7 @@ async def test_ingest_rejects_over_capacity(client):
 async def test_hypertable_partitioning_query(client):
     """Asserts chunk_count > 0 after inserting 8+ days of data (TimescaleDB only)."""
     asset = await _make_asset(client, name="TS-Asset", capacity_mw=100.0)
-    base = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    base = datetime(2024, 1, 1, tzinfo=UTC)
     rows = [
         {"asset_id": asset["id"],
          "measured_at": (base + timedelta(hours=h)).isoformat(),
@@ -83,6 +81,7 @@ async def test_hypertable_partitioning_query(client):
 async def test_celery_deviation_publishes_redis():
     """Verifies publish_deviation writes to fakeredis channel."""
     import fakeredis
+
     from app.reopt.worker import publish_deviation
 
     server = fakeredis.FakeServer()

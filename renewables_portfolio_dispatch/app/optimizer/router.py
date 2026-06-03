@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -64,8 +64,8 @@ async def optimise_schedule(
 
     # Persist schedule
     schedule_id = uuid.uuid4()
-    now = datetime.now(timezone.utc)
-    t0 = datetime(body.date.year, body.date.month, body.date.day, tzinfo=timezone.utc)
+    now = datetime.now(UTC)
+    t0 = datetime(body.date.year, body.date.month, body.date.day, tzinfo=UTC)
 
     schedule_db = Schedule(
         id=str(schedule_id),

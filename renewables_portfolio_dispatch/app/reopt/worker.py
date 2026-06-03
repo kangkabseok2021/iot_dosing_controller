@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from celery import shared_task
 from loguru import logger
@@ -30,8 +30,8 @@ async def _reopt_cycle(asset_id: int, delta_mw: float, timestamp: str) -> dict:
     try:
         msg_time = datetime.fromisoformat(timestamp)
         if msg_time.tzinfo is None:
-            msg_time = msg_time.replace(tzinfo=timezone.utc)
-        age_s = (datetime.now(timezone.utc) - msg_time).total_seconds()
+            msg_time = msg_time.replace(tzinfo=UTC)
+        age_s = (datetime.now(UTC) - msg_time).total_seconds()
         if age_s > 3600:
             logger.info(f"Ignoring stale re-opt message (age={age_s:.0f} s)")
             return {"status": "skipped_stale", "age_s": age_s}
@@ -79,6 +79,6 @@ def publish_deviation(redis_url: str, asset_id: int, delta_mw: float) -> None:
     client = _redis.Redis.from_url(redis_url, decode_responses=True)
     payload = json.dumps(
         {"asset_id": asset_id, "delta_mw": delta_mw,
-         "timestamp": datetime.now(timezone.utc).isoformat()}
+         "timestamp": datetime.now(UTC).isoformat()}
     )
     client.publish("measurements.deviation", payload)

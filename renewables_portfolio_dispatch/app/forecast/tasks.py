@@ -2,14 +2,12 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-import numpy as np
 import pandas as pd
 from celery import shared_task
 from loguru import logger
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.forecast.pipeline import ForecastPipeline
 from app.models.orm import ForecastInterval, ForecastRun, Telemetry
@@ -56,7 +54,7 @@ async def _run_forecast_async(asset_id: int, horizon_h: int) -> dict:
     horizon_steps = horizon_h * 4  # 15-min intervals
     mu, sigma = pipeline.predict(horizon_steps)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     async with SessionLocal() as db:
         run = ForecastRun(
             asset_id=asset_id,

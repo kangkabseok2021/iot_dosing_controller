@@ -18,12 +18,12 @@ class Base(DeclarativeBase):
     pass
 
 
-class AssetType(str, enum.Enum):
+class AssetType(enum.StrEnum):
     WIND = "wind"
     SOLAR = "solar"
 
 
-class ScheduleStatus(str, enum.Enum):
+class ScheduleStatus(enum.StrEnum):
     DRAFT = "DRAFT"
     SUBMITTED = "SUBMITTED"
     ACTIVE = "ACTIVE"

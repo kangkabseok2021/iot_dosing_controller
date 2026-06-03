@@ -1,7 +1,7 @@
 """Phase 2 — 5 tests: SARIMA+XGBoost ensemble forecast pipeline."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import numpy as np
 import pandas as pd
@@ -20,7 +20,7 @@ def _make_sinusoidal_series(n: int = 300, seed: int = 42) -> pd.Series:
     values: list[float] = [mean]
     for _ in range(n - 1):
         values.append(mean + phi * (values[-1] - mean) + rng.normal(0, noise_std))
-    start = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    start = datetime(2024, 1, 1, tzinfo=UTC)
     idx = pd.DatetimeIndex([start + timedelta(minutes=15 * i) for i in range(n)])
     return pd.Series(np.maximum(values, 0.0), index=idx)
 
@@ -89,7 +89,7 @@ async def test_ensemble_outperforms_sarima_alone():
 @pytest.mark.asyncio
 async def test_forecast_saves_run_to_db(db_session):
     """Directly call the async forecast logic and assert DB row exists."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from app.models.orm import Asset, ForecastRun
 
@@ -108,17 +108,8 @@ async def test_forecast_saves_run_to_db(db_session):
     db_session.add_all(rows)
     await db_session.commit()
 
-    # Directly invoke the async forecast helper
     from sqlalchemy import select
-    from app.database import SessionLocal
 
-    # Patch SessionLocal to use test session's engine
-    import app.forecast.tasks as tasks_module
-    from app.database import engine
-
-    original = tasks_module.SessionLocal if hasattr(tasks_module, "SessionLocal") else None
-    # Use the existing engine via session
-    # Run directly (bypass Celery task wrapper)
     from app.forecast.pipeline import ForecastPipeline
     from app.models.orm import ForecastInterval
 
@@ -128,7 +119,7 @@ async def test_forecast_saves_run_to_db(db_session):
 
     run = ForecastRun(
         asset_id=asset.id,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
         horizon_h=1,
         mape=pipeline.mape_ensemble,
         model_params_json="{}",

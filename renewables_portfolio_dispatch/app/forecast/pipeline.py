@@ -55,7 +55,7 @@ class ForecastPipeline:
             raise RuntimeError("call fit() first")
         return self._mape_ensemble
 
-    def fit(self, series: pd.Series, holdout_frac: float = 0.2) -> "ForecastPipeline":
+    def fit(self, series: pd.Series, holdout_frac: float = 0.2) -> ForecastPipeline:
         """Fit on training split; compute MAPE on held-out fraction."""
         n = len(series)
         split = int(n * (1 - holdout_frac))

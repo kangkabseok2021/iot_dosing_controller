@@ -2,13 +2,12 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.optimizer.dispatch import AssetSpec, DispatchOptimiser
-
 
 # ── LP unit tests (no DB needed) ─────────────────────────────────────────────
 
@@ -83,7 +82,7 @@ async def test_lp_infeasible_raises():
 
 def _make_fahrplan(schedule_id: uuid.UUID | None = None) -> dict:
     sid = schedule_id or uuid.uuid4()
-    t0 = datetime(2024, 6, 1, tzinfo=timezone.utc)
+    t0 = datetime(2024, 6, 1, tzinfo=UTC)
     return {
         "schedule_id": str(sid),
         "portfolio_id": 1,
@@ -135,7 +134,6 @@ async def test_fahrplan_patch_updates_status(client):
 async def test_blob_archive_called_on_submit(client):
     """Verifies the blob store archive() is called when POST /api/fahrplan is hit."""
     from app.fahrplan.blob_store import get_blob_store
-    from app.fahrplan.router import router as fahrplan_rtr
     from app.main import app as fastapi_app
 
     mock_store = MagicMock()
