@@ -61,11 +61,16 @@ async def pg_client():
         await conn.run_sync(Base.metadata.create_all)
         # TimescaleDB: all unique constraints must include the partition column.
         # Recreate the telemetry PK as (id, measured_at) before create_hypertable.
+        # asyncpg requires each statement in its own execute() call.
+        await conn.execute(
+            text("ALTER TABLE telemetry DROP CONSTRAINT IF EXISTS telemetry_pkey")
+        )
+        await conn.execute(
+            text("ALTER TABLE telemetry ADD PRIMARY KEY (id, measured_at)")
+        )
         await conn.execute(
             text(
                 """
-                ALTER TABLE telemetry DROP CONSTRAINT IF EXISTS telemetry_pkey;
-                ALTER TABLE telemetry ADD PRIMARY KEY (id, measured_at);
                 DO $$
                 BEGIN
                     IF EXISTS (
