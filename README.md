@@ -1,6 +1,6 @@
-# IoT Dosing Controller, EV Battery HIL, SLM Sensor Analytics, Fleet Routing API & AWS Sensor API
+# IoT Dosing Controller, EV Battery HIL, SLM Sensor Analytics, Fleet Routing API, AWS Sensor API & Renewables Portfolio Dispatch
 
-A collection of industrial IoT, predictive maintenance, logistics, and cloud-native backend systems sharing edge daemon architectures, asyncio orchestration, and machine learning telemetry pipelines.
+A collection of industrial IoT, predictive maintenance, logistics, energy trading, and cloud-native backend systems sharing edge daemon architectures, asyncio orchestration, and machine learning telemetry pipelines.
 
 | Project | Description | Docs |
 |---|---|---|
@@ -9,6 +9,7 @@ A collection of industrial IoT, predictive maintenance, logistics, and cloud-nat
 | **SLM Machine Sensor Analytics** | Multi-sensor telemetry ingestion, statistical feature extraction (RMS/Kurtosis), and Isolation Forest anomaly detection API | [docs/slm-sensor-analytics.md](docs/slm-sensor-analytics.md) |
 | **Secure Logistics Fleet Routing API** | FastAPI + JWT RBAC + Haversine O(n²) VRP optimizer + Redis route cache (TTL 300 s) + SQLAlchemy fleet schema — 24 pytest tests at 94.5% coverage | [docs/fleet-routing-api.md](docs/fleet-routing-api.md) |
 | **Cloud-Native Python Backend on AWS** | FastAPI + async SQLAlchemy 2.0 + S3 archival (boto3/asyncio.to_thread) + 4-module Terraform IaC (VPC · ECS Fargate · RDS PostgreSQL 16 · S3/IAM) — 15 pytest at 93% coverage via moto + aiosqlite | [docs/aws-sensor-api.md](docs/aws-sensor-api.md) |
+| **Renewables Portfolio Dispatch Optimizer** | SARIMA + XGBoost ensemble day-ahead forecast · CVXPY/OSQP LP dispatcher · Fahrplan REST API (UUID, POST/GET/PATCH) · Redis Pub/Sub re-opt worker · Azure Blob archival + Bicep IaC · TimescaleDB hypertable · 25 pytest-asyncio | [Quick Start ↓](#renewables-portfolio-dispatch-optimizer) |
 
 ---
 
@@ -174,6 +175,33 @@ iot_dosing_controller/
 │   ├── docker/Dockerfile    #   multi-stage, python:3.12-slim-bookworm
 │   ├── pyproject.toml       #   standalone uv project
 │   └── docs/aws-sensor-api.md  # Architecture · Terraform modules · boto3/thread rationale
+├── renewables_portfolio_dispatch/  # ── Renewables Portfolio Dispatch Optimizer ──
+│   ├── app/
+│   │   ├── telemetry/router.py    #   POST /api/assets · POST /api/telemetry (bulk 200 rows)
+│   │   ├── forecast/
+│   │   │   ├── pipeline.py        #   SARIMA(1,1,1)(1,1,0,96) + XGBRegressor(n=100); μ=0.5·exp(ŷ_s)+0.5·ŷ_x
+│   │   │   ├── router.py          #   POST /api/forecast/{asset_id} → BackgroundTasks
+│   │   │   └── tasks.py           #   Celery shared_task _run_forecast_async
+│   │   ├── optimizer/
+│   │   │   ├── dispatch.py        #   DispatchOptimiser — CVXPY LP + OSQP; cp.norm L1 netting
+│   │   │   └── router.py          #   POST /api/schedule/optimise (201) → persists Schedule rows
+│   │   ├── fahrplan/
+│   │   │   ├── schemas.py         #   Fahrplan {UUID, portfolio_id, date, intervals} · ScheduleInterval
+│   │   │   ├── router.py          #   POST/GET/PATCH /api/fahrplan/{schedule_id}
+│   │   │   └── blob_store.py      #   BlobStore Protocol: AzureBlobStore / NullBlobStore
+│   │   ├── reopt/worker.py        #   Redis Pub/Sub subscriber + intraday_reforecast Celery task
+│   │   └── models/{orm,schemas}.py
+│   ├── migrations/versions/001_initial_schema.py  # create_hypertable DO block
+│   ├── tests/                     #   25 pytest-asyncio (24 pass + 1 TimescaleDB skip locally)
+│   │   ├── conftest.py            #   SQLite client + pg_client (real PG + hypertable setup)
+│   │   ├── test_telemetry.py      #   6 tests: assets · bulk ingest · over-capacity · TimescaleDB chunks
+│   │   ├── test_forecast.py       #   5 tests: MAPE<8% · endpoint · non-negative · ensemble · DB save
+│   │   ├── test_optimizer.py      #   8 tests: LP feasibility · ramp · netting · infeasible · Fahrplan CRUD
+│   │   └── test_reopt.py          #   6 tests: cycle<30s · stale guard · channel subscribe · deviation
+│   ├── infra/main.bicep           #   Container Apps + PostgreSQL Flexible + Redis + Blob Storage
+│   ├── Dockerfile                 #   builder (uv sync) + runtime (non-root appuser)
+│   ├── docker-compose.yml         #   timescale/timescaledb:latest-pg16 · redis · forecast-api · celery
+│   └── pyproject.toml             #   cvxpy · statsmodels · xgboost · scikit-learn · celery · redis
 └── .github/workflows/
     ├── ci.yml                    # Dosing controller CI + aws-sensor-api-test (15 pytest, moto)
     ├── ev-battery-hil.yml        # EV Battery HIL CI (python-lint + python-test + ARM64)
@@ -270,6 +298,35 @@ curl -X POST http://localhost:8000/api/v1/routes \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"depot_lat":51.5074,"depot_lon":-0.1278,"waypoints":[{"id":1,"lat":48.8566,"lon":2.3522},{"id":2,"lat":52.5200,"lon":13.4050}]}'
+```
+
+### Renewables Portfolio Dispatch Optimizer
+
+```bash
+# Run tests (SQLite in-memory — no real PostgreSQL or Redis needed)
+cd renewables_portfolio_dispatch
+uv sync
+uv run pytest tests/ -v   # 24 pass + 1 TimescaleDB skip
+
+# Full stack (TimescaleDB + Redis + Celery)
+docker compose up -d
+# API docs: http://localhost:8000/docs
+
+# Ingest an asset and trigger a forecast
+curl -X POST http://localhost:8000/api/assets \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Wind-Farm-1","type":"wind","capacity_mw":100.0,"ramp_rate_mw_per_min":5.0}'
+curl -X POST http://localhost:8000/api/forecast/1
+
+# Optimise a daily dispatch schedule
+curl -X POST http://localhost:8000/api/schedule/optimise \
+  -H "Content-Type: application/json" \
+  -d '{"portfolio_id":1,"date":"2026-06-03","asset_ids":[1],"price_curve_eur_mwh":[50.0,52.0,48.0,55.0,60.0,58.0,54.0,50.0,46.0,44.0,42.0,43.0,45.0,47.0,50.0,53.0,56.0,59.0,61.0,63.0,62.0,60.0,57.0,54.0]}'
+
+# Run with live TimescaleDB chunks test
+USE_TIMESCALEDB=1 \
+  DATABASE_URL=postgresql+asyncpg://dispatch:dispatch@localhost:5432/dispatch \
+  uv run pytest tests/test_telemetry.py::test_hypertable_partitioning_query -v
 ```
 
 ### Cloud-Native Python Backend on AWS
@@ -377,6 +434,14 @@ uv run pytest tests/ -v --tb=short
 | `lint`  | ubuntu-latest | flake8 (max-line-length=100) on app/ and tests/                 |
 | `test`  | ubuntu-latest | 24 pytest tests — SQLite override, ≥90% coverage enforced      |
 
+### Renewables Dispatch (root `ci.yml`) — job `renewables-dispatch-test`
+
+| Step | Runner | What it does |
+|---|---|---|
+| ruff lint + format check | ubuntu-latest | `ruff check` + `ruff format --check` on app/ tests/ |
+| mypy | ubuntu-latest | `mypy app/` — typed defs enforced; third-party overrides for cvxpy/celery/redis |
+| 25 pytest-asyncio | ubuntu-latest | Service containers: `timescale/timescaledb:latest-pg16` + `redis:7-alpine`; `USE_TIMESCALEDB=1` enables hypertable chunk test |
+
 ---
 
 ## Tech Stack
@@ -390,5 +455,9 @@ uv run pytest tests/ -v --tb=short
 | REST API     | Python, FastAPI, uvicorn                |
 | Dashboard    | Vanilla JS, Chart.js, nginx             |
 | DevOps       | Docker Compose, Ansible, GitHub Actions, Terraform |
-| Cloud        | AWS ECS Fargate, RDS PostgreSQL 16, S3, ECR, ALB   |
+| Cloud        | AWS ECS Fargate, RDS PostgreSQL 16, S3, ECR, ALB; Azure Container Apps, PostgreSQL Flexible Server, Redis Cache, Blob Storage |
+| Energy ML    | statsmodels SARIMAX, XGBoost, scikit-learn, CVXPY/OSQP LP solver, pandas, numpy |
+| Event-driven | Celery 5.3 (Redis broker), Redis Pub/Sub, fakeredis |
+| Time-series  | TimescaleDB hypertable (7-day chunks), Alembic async migrations |
+| IaC          | Terraform (AWS), Azure Bicep                        |
 | Targets      | x86_64 (CI/dev), ARM64 (Raspberry Pi 4)            |
