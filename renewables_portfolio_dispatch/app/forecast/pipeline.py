@@ -1,4 +1,5 @@
 """SARIMA + XGBoost ensemble for 15-min generation forecasting."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -11,7 +12,7 @@ def _build_features(series: pd.Series) -> pd.DataFrame:
     df = pd.DataFrame({"y": series.values}, index=series.index)
     df["hour"] = series.index.hour if hasattr(series.index, "hour") else 0
     df["dow"] = series.index.dayofweek if hasattr(series.index, "dayofweek") else 0
-    df["lag_1"] = df["y"].shift(4)   # 1 h at 15-min resolution
+    df["lag_1"] = df["y"].shift(4)  # 1 h at 15-min resolution
     df["lag_96"] = df["y"].shift(96)  # 24 h at 15-min resolution
     df["roll_mean_24h"] = df["y"].rolling(96, min_periods=1).mean()
     df["roll_std_24h"] = df["y"].rolling(96, min_periods=1).std().fillna(0)
@@ -90,9 +91,7 @@ class ForecastPipeline:
         actual = test.clip(lower=0).values
 
         eps = 1.0  # avoid division by zero for near-zero values
-        self._mape_sarima = float(
-            np.mean(np.abs(actual - sarima_pred) / (np.abs(actual) + eps))
-        )
+        self._mape_sarima = float(np.mean(np.abs(actual - sarima_pred) / (np.abs(actual) + eps)))
         self._mape_ensemble = float(
             np.mean(np.abs(actual - ensemble_pred) / (np.abs(actual) + eps))
         )

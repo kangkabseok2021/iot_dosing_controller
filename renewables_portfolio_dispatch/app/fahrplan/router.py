@@ -45,20 +45,14 @@ async def create_fahrplan(
 
 
 @router.get("/{schedule_id}", response_model=Fahrplan)
-async def get_fahrplan(
-    schedule_id: uuid.UUID, db: AsyncSession = Depends(get_db)
-) -> Fahrplan:
-    result = await db.execute(
-        select(Schedule).where(Schedule.id == str(schedule_id))
-    )
+async def get_fahrplan(schedule_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -> Fahrplan:
+    result = await db.execute(select(Schedule).where(Schedule.id == str(schedule_id)))
     schedule = result.scalar_one_or_none()
     if schedule is None:
         raise HTTPException(status_code=404, detail="Schedule not found")
 
     ivl_result = await db.execute(
-        select(ScheduleIntervalDB).where(
-            ScheduleIntervalDB.schedule_id == str(schedule_id)
-        )
+        select(ScheduleIntervalDB).where(ScheduleIntervalDB.schedule_id == str(schedule_id))
     )
     intervals = [
         ScheduleInterval(
@@ -87,27 +81,21 @@ async def patch_fahrplan(
     patch: FahrplanPatch,
     db: AsyncSession = Depends(get_db),
 ) -> Fahrplan:
-    result = await db.execute(
-        select(Schedule).where(Schedule.id == str(schedule_id))
-    )
+    result = await db.execute(select(Schedule).where(Schedule.id == str(schedule_id)))
     schedule = result.scalar_one_or_none()
     if schedule is None:
         raise HTTPException(status_code=404, detail="Schedule not found")
 
     if patch.status is not None:
         ivl_result = await db.execute(
-            select(ScheduleIntervalDB).where(
-                ScheduleIntervalDB.schedule_id == str(schedule_id)
-            )
+            select(ScheduleIntervalDB).where(ScheduleIntervalDB.schedule_id == str(schedule_id))
         )
         for ivl in ivl_result.scalars():
             ivl.status = patch.status
 
     if patch.intervals is not None:
         ivl_result = await db.execute(
-            select(ScheduleIntervalDB).where(
-                ScheduleIntervalDB.schedule_id == str(schedule_id)
-            )
+            select(ScheduleIntervalDB).where(ScheduleIntervalDB.schedule_id == str(schedule_id))
         )
         existing = {i.id: i for i in ivl_result.scalars()}
         for new_ivl in patch.intervals:

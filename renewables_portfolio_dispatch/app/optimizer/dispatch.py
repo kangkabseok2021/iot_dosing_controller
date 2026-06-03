@@ -1,4 +1,5 @@
 """CVXPY LP dispatch optimiser for renewable portfolio scheduling."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

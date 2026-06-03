@@ -1,4 +1,5 @@
 """Azure Blob Storage adapter for Fahrplan archival."""
+
 from __future__ import annotations
 
 from typing import Protocol
@@ -22,11 +23,7 @@ class AzureBlobStore:
         self._container = container
 
     async def archive(self, fahrplan: Fahrplan) -> str:
-        key = (
-            f"{fahrplan.portfolio_id}"
-            f"/{fahrplan.date}"
-            f"/{fahrplan.schedule_id}.json"
-        )
+        key = f"{fahrplan.portfolio_id}/{fahrplan.date}/{fahrplan.schedule_id}.json"
         blob_client = self._client.get_blob_client(self._container, key)
         await blob_client.upload_blob(fahrplan.model_dump_json(), overwrite=True)
         return key

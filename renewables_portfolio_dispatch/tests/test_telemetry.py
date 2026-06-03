@@ -1,4 +1,5 @@
 """Phase 1 — 6 tests: assets + telemetry ingestion + TimescaleDB + Celery deviation."""
+
 from __future__ import annotations
 
 import json
@@ -9,6 +10,7 @@ import pytest
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
+
 async def _make_asset(client, **kwargs) -> dict:
     payload = {"name": "Wind-01", "type": "wind", "capacity_mw": 100.0} | kwargs
     resp = await client.post("/api/assets", json=payload)
@@ -17,6 +19,7 @@ async def _make_asset(client, **kwargs) -> dict:
 
 
 # ── tests ─────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_create_asset_valid(client):
@@ -39,8 +42,11 @@ async def test_ingest_telemetry_bulk(client):
     asset = await _make_asset(client, name="Wind-Bulk", capacity_mw=80.0)
     now = datetime.now(UTC)
     rows = [
-        {"asset_id": asset["id"], "measured_at": (now + timedelta(minutes=15 * i)).isoformat(),
-         "power_mw": float(i * 5)}
+        {
+            "asset_id": asset["id"],
+            "measured_at": (now + timedelta(minutes=15 * i)).isoformat(),
+            "power_mw": float(i * 5),
+        }
         for i in range(10)
     ]
     resp = await client.post("/api/telemetry", json={"rows": rows})
@@ -58,17 +64,17 @@ async def test_ingest_rejects_over_capacity(client):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(
-    os.getenv("USE_TIMESCALEDB") != "1", reason="Requires TimescaleDB"
-)
+@pytest.mark.skipif(os.getenv("USE_TIMESCALEDB") != "1", reason="Requires TimescaleDB")
 async def test_hypertable_partitioning_query(client):
     """Asserts chunk_count > 0 after inserting 8+ days of data (TimescaleDB only)."""
     asset = await _make_asset(client, name="TS-Asset", capacity_mw=100.0)
     base = datetime(2024, 1, 1, tzinfo=UTC)
     rows = [
-        {"asset_id": asset["id"],
-         "measured_at": (base + timedelta(hours=h)).isoformat(),
-         "power_mw": float(h % 24 * 2)}
+        {
+            "asset_id": asset["id"],
+            "measured_at": (base + timedelta(hours=h)).isoformat(),
+            "power_mw": float(h % 24 * 2),
+        }
         for h in range(8 * 24)  # 8 days × 1-hour intervals
     ]
     await client.post("/api/telemetry", json={"rows": rows})

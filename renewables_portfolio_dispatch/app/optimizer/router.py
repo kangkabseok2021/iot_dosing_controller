@@ -14,13 +14,9 @@ router = APIRouter(prefix="/api/schedule", tags=["optimizer"])
 
 
 @router.post("/optimise", response_model=Fahrplan, status_code=201)
-async def optimise_schedule(
-    body: OptimiseRequest, db: AsyncSession = Depends(get_db)
-) -> Fahrplan:
+async def optimise_schedule(body: OptimiseRequest, db: AsyncSession = Depends(get_db)) -> Fahrplan:
     # Fetch assets
-    assets_result = await db.execute(
-        select(Asset).where(Asset.id.in_(body.asset_ids))
-    )
+    assets_result = await db.execute(select(Asset).where(Asset.id.in_(body.asset_ids)))
     assets = assets_result.scalars().all()
     if len(assets) != len(body.asset_ids):
         raise HTTPException(status_code=404, detail="One or more assets not found")
@@ -51,14 +47,10 @@ async def optimise_schedule(
             mus = [0.0] * T
         forecasts.append(mus[:T])
 
-    specs = [
-        AssetSpec(a.id, a.capacity_mw, a.ramp_rate_mw_per_min) for a in assets
-    ]
+    specs = [AssetSpec(a.id, a.capacity_mw, a.ramp_rate_mw_per_min) for a in assets]
 
     try:
-        result = DispatchOptimiser().optimise(
-            specs, body.price_curve_eur_mwh, forecasts
-        )
+        result = DispatchOptimiser().optimise(specs, body.price_curve_eur_mwh, forecasts)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

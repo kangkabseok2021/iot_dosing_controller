@@ -1,4 +1,5 @@
 """Redis Pub/Sub subscriber + intraday re-optimisation Celery task."""
+
 from __future__ import annotations
 
 import json
@@ -78,7 +79,6 @@ def publish_deviation(redis_url: str, asset_id: int, delta_mw: float) -> None:
 
     client = _redis.Redis.from_url(redis_url, decode_responses=True)
     payload = json.dumps(
-        {"asset_id": asset_id, "delta_mw": delta_mw,
-         "timestamp": datetime.now(UTC).isoformat()}
+        {"asset_id": asset_id, "delta_mw": delta_mw, "timestamp": datetime.now(UTC).isoformat()}
     )
     client.publish("measurements.deviation", payload)

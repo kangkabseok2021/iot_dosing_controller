@@ -1,4 +1,5 @@
 """Phase 4 — 6 tests: Redis Pub/Sub re-optimisation worker."""
+
 from __future__ import annotations
 
 import json
@@ -58,7 +59,6 @@ async def test_reopt_ignores_stale_messages():
 async def test_reopt_worker_subscribes_correct_channel():
     """start_deviation_subscriber subscribes to 'measurements.deviation'."""
     import fakeredis
-
 
     server = fakeredis.FakeServer()
     fake = fakeredis.FakeRedis(server=server, decode_responses=True)

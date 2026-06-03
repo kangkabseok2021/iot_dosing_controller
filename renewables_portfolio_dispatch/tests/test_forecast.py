@@ -1,4 +1,5 @@
 """Phase 2 — 5 tests: SARIMA+XGBoost ensemble forecast pipeline."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -34,9 +35,7 @@ async def test_forecast_mape_below_8pct():
     series = _make_sinusoidal_series(300)
     pipeline = ForecastPipeline(**_FAST_PIPELINE)
     pipeline.fit(series)
-    assert pipeline.mape_ensemble < 0.08, (
-        f"MAPE {pipeline.mape_ensemble:.4f} exceeds 8% threshold"
-    )
+    assert pipeline.mape_ensemble < 0.08, f"MAPE {pipeline.mape_ensemble:.4f} exceeds 8% threshold"
 
 
 @pytest.mark.asyncio
@@ -128,18 +127,18 @@ async def test_forecast_saves_run_to_db(db_session):
     await db_session.flush()
 
     for i in range(4):
-        db_session.add(ForecastInterval(
-            run_id=run.id,
-            interval_start=series.index[0].to_pydatetime(),
-            interval_end=series.index[1].to_pydatetime(),
-            mean_mw=float(mu[i]),
-            std_mw=float(sigma[i]),
-        ))
+        db_session.add(
+            ForecastInterval(
+                run_id=run.id,
+                interval_start=series.index[0].to_pydatetime(),
+                interval_end=series.index[1].to_pydatetime(),
+                mean_mw=float(mu[i]),
+                std_mw=float(sigma[i]),
+            )
+        )
     await db_session.commit()
 
-    result = await db_session.execute(
-        select(ForecastRun).where(ForecastRun.asset_id == asset.id)
-    )
+    result = await db_session.execute(select(ForecastRun).where(ForecastRun.asset_id == asset.id))
     saved = result.scalar_one_or_none()
     assert saved is not None
     assert saved.mape < 1.0

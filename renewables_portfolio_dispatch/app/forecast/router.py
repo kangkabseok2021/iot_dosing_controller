@@ -24,9 +24,7 @@ async def trigger_forecast(
 
 
 @router.get("/{asset_id}/latest", response_model=ForecastRunRead)
-async def get_latest_forecast(
-    asset_id: int, db: AsyncSession = Depends(get_db)
-) -> ForecastRun:
+async def get_latest_forecast(asset_id: int, db: AsyncSession = Depends(get_db)) -> ForecastRun:
     result = await db.execute(
         select(ForecastRun)
         .where(ForecastRun.asset_id == asset_id)

@@ -81,9 +81,7 @@ class ForecastInterval(Base):
 class Schedule(Base):
     __tablename__ = "schedules"
 
-    id: Mapped[str] = mapped_column(
-        String, primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     portfolio_id: Mapped[int] = mapped_column(Integer)
     date: Mapped[str] = mapped_column(String)  # ISO date string
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -102,8 +100,6 @@ class ScheduleIntervalDB(Base):
     interval_start: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     interval_end: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     scheduled_mw: Mapped[float] = mapped_column(Float)
-    status: Mapped[str] = mapped_column(
-        String, default=ScheduleStatus.DRAFT.value
-    )
+    status: Mapped[str] = mapped_column(String, default=ScheduleStatus.DRAFT.value)
 
     schedule: Mapped["Schedule"] = relationship(back_populates="intervals")

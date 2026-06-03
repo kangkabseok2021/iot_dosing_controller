@@ -1,4 +1,5 @@
 """Phase 3 — 8 tests: CVXPY LP optimizer + Fahrplan CRUD + Blob archival."""
+
 from __future__ import annotations
 
 import uuid
@@ -11,10 +12,11 @@ from app.optimizer.dispatch import AssetSpec, DispatchOptimiser
 
 # ── LP unit tests (no DB needed) ─────────────────────────────────────────────
 
+
 def _two_asset_specs() -> list[AssetSpec]:
     return [
         AssetSpec(asset_id=1, capacity_mw=100.0, ramp_rate_mw_per_min=5.0),
-        AssetSpec(asset_id=2, capacity_mw=80.0,  ramp_rate_mw_per_min=4.0),
+        AssetSpec(asset_id=2, capacity_mw=80.0, ramp_rate_mw_per_min=4.0),
     ]
 
 
@@ -73,12 +75,11 @@ async def test_lp_infeasible_raises():
     # Forecast = 500 MW, capacity = 10 MW, imbalance_tol = 0 → infeasible
     forecasts = [[500.0] * 6]
     with pytest.raises(ValueError, match="infeasible"):
-        DispatchOptimiser().optimise(
-            assets, [50.0] * 6, forecasts, imbalance_tol_mwh=0.0
-        )
+        DispatchOptimiser().optimise(assets, [50.0] * 6, forecasts, imbalance_tol_mwh=0.0)
 
 
 # ── Fahrplan CRUD (DB needed) ─────────────────────────────────────────────────
+
 
 def _make_fahrplan(schedule_id: uuid.UUID | None = None) -> dict:
     sid = schedule_id or uuid.uuid4()
