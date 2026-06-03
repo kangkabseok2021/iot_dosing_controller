@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pandas as pd
 from statsmodels.tsa.statespace.sarimax import SARIMAX
@@ -36,7 +38,7 @@ class ForecastPipeline:
     ) -> None:
         self._sarima_order = sarima_order
         self._seasonal_order = seasonal_order
-        self._sarima_fit = None
+        self._sarima_fit: Any = None
         self._xgb: XGBRegressor | None = None
         self._sigma: float = 1.0
         self._mape_sarima: float | None = None
@@ -64,7 +66,7 @@ class ForecastPipeline:
 
         # SARIMA on log-transformed series (keeps forecasts ≥ 0)
         log_train = np.log1p(train.clip(lower=0))
-        sarima_kwargs: dict = {"order": self._sarima_order}
+        sarima_kwargs: dict[str, object] = {"order": self._sarima_order}
         if self._seasonal_order is not None:
             sarima_kwargs["seasonal_order"] = self._seasonal_order
         model = SARIMAX(log_train, **sarima_kwargs, initialization="approximate_diffuse")

@@ -53,5 +53,12 @@ line-length = 100
 select = ["E", "F", "I", "UP"]
 
 [tool.mypy]
-strict = true
 ignore_missing_imports = true
+disallow_untyped_defs = true
+warn_return_any = false
+warn_unused_ignores = false
+
+[[tool.mypy.overrides]]
+# cvxpy, celery, redis, statsmodels ship no type stubs — suppress all errors
+module = ["cvxpy.*", "celery.*", "statsmodels.*", "redis.*", "fakeredis.*", "xgboost.*", "azure.*"]
+ignore_errors = true

@@ -11,7 +11,7 @@ from loguru import logger
 
 
 @shared_task(name="reopt.intraday_reforecast")
-def intraday_reforecast(asset_id: int, delta_mw: float, timestamp: str) -> dict:  # type: ignore[type-arg]
+def intraday_reforecast(asset_id: int, delta_mw: float, timestamp: str) -> dict[str, object]:
     """
     Re-runs XGBoost (fast path only) for the remaining hours of the day,
     then calls the Dispatch Optimizer and PATCHes the active Fahrplan.
@@ -23,7 +23,7 @@ def intraday_reforecast(asset_id: int, delta_mw: float, timestamp: str) -> dict:
     return asyncio.run(_reopt_cycle(asset_id, delta_mw, timestamp))
 
 
-async def _reopt_cycle(asset_id: int, delta_mw: float, timestamp: str) -> dict:
+async def _reopt_cycle(asset_id: int, delta_mw: float, timestamp: str) -> dict[str, object]:
     t_start = time.monotonic()
     logger.info(f"Re-opt triggered: asset={asset_id} delta={delta_mw:.2f} MW")
 

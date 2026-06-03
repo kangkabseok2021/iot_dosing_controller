@@ -15,14 +15,14 @@ from app.models.orm import ForecastInterval, ForecastRun, Telemetry
 
 
 @shared_task(name="forecast.run_forecast", bind=True)
-def run_forecast(self: object, asset_id: int, horizon_h: int = 24) -> dict:  # type: ignore[type-arg]
+def run_forecast(self: object, asset_id: int, horizon_h: int = 24) -> dict[str, object]:
     """Synchronous wrapper executed by Celery worker."""
     import asyncio
 
     return asyncio.run(_run_forecast_async(asset_id, horizon_h))
 
 
-async def _run_forecast_async(asset_id: int, horizon_h: int) -> dict:
+async def _run_forecast_async(asset_id: int, horizon_h: int) -> dict[str, object]:
     from app.database import SessionLocal
 
     async with SessionLocal() as db:

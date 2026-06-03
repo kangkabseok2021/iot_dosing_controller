@@ -15,7 +15,9 @@ class AzureBlobStore:
     """Archives Fahrplan JSON to Azure Blob Storage."""
 
     def __init__(self, connection_string: str, container: str) -> None:
-        from azure.storage.blob.aio import BlobServiceClient  # type: ignore[import-untyped]
+        from azure.storage.blob.aio import (
+            BlobServiceClient,  # type: ignore[import-untyped,unused-ignore]
+        )
 
         self._client: BlobServiceClient = BlobServiceClient.from_connection_string(
             connection_string
